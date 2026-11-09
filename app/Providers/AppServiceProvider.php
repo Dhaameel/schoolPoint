@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Setting;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,7 +21,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $timezone = Setting::get('timezone', config('app.timezone'));
+        try {
+            $timezone = Cache::rememberForever(
+                'settings.timezone',
+                fn () => Setting::get('timezone', config('app.timezone'))
+            );
+        } catch (\Throwable) {
+            $timezone = Setting::get('timezone', config('app.timezone'));
+        }
 
         if ($timezone && in_array($timezone, timezone_identifiers_list(), true)) {
             config(['app.timezone' => $timezone]);

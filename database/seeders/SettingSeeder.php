@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Setting;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Cache;
 
 class SettingSeeder extends Seeder
 {
@@ -21,5 +22,7 @@ class SettingSeeder extends Seeder
         foreach ($defaults as $key => $value) {
             Setting::query()->firstOrCreate(['key' => $key], ['value' => $value]);
         }
+
+        Cache::forever('settings.timezone', $defaults['timezone']);
     }
 }

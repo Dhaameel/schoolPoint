@@ -6,6 +6,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -57,6 +58,14 @@ class SettingsTest extends TestCase
         $this->assertSame('Africa/Nairobi', Setting::get('timezone'));
         $this->assertSame('Africa/Nairobi', config('app.timezone'));
         $this->assertDatabaseHas('audit_logs', ['action' => 'settings.updated']);
+    }
+
+    #[Test]
+    public function the_timezone_read_is_cached(): void
+    {
+        Setting::put('timezone', 'Africa/Nairobi');
+
+        $this->assertSame('Africa/Nairobi', Cache::get('settings.timezone'));
     }
 
     #[Test]

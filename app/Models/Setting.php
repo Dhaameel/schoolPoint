@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Setting extends Model
 {
@@ -20,5 +21,9 @@ class Setting extends Model
     public static function put(string $key, ?string $value): void
     {
         static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
+
+        if ($key === 'timezone') {
+            Cache::forever('settings.timezone', $value);
+        }
     }
 }
