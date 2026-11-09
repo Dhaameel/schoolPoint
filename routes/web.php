@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\TwoFactorChallengeController;
@@ -43,9 +44,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::get('/classes', [PlaceholderController::class, 'admin'])
             ->defaults('section', 'classes')
             ->name('classes.index');
-        Route::get('/subjects', [PlaceholderController::class, 'admin'])
-            ->defaults('section', 'subjects')
-            ->name('subjects.index');
+        Route::resource('/subjects', SubjectController::class)->except('show');
         Route::get('/attendance', [PlaceholderController::class, 'admin'])
             ->defaults('section', 'attendance')
             ->name('attendance.index');

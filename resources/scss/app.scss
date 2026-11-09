@@ -473,4 +473,42 @@ a {
     .dashboard-heading {
         flex-direction: column;
     }
+
+    .data-table thead {
+        display: none;
+    }
+
+    .data-table tbody tr {
+        display: block;
+        border: 1px solid #e9e2cf;
+        border-radius: 12px;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        background: #fff;
+    }
+
+    .data-table tbody td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        border: 0;
+        padding: 0.3rem 0;
+        white-space: normal;
+        text-align: right;
+    }
+
+    .data-table tbody td::before {
+        content: attr(data-label);
+        color: #6b7280;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: left;
+        flex: 0 0 auto;
+    }
+
+    .data-table tbody td.text-end {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
 }
