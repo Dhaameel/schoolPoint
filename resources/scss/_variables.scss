@@ -1,0 +1,29 @@
+// schoolPoint palette and Bootstrap overrides.
+$sp-blue: #0b5ed7;
+$sp-blue-dark: #0a3d62;
+$sp-cream: #fffdf5;
+$sp-cream-dark: #f3ecd8;
+$sp-green: #198754;
+$sp-red: #dc3545;
+$sp-amber: #d97706;
+
+$primary: $sp-blue;
+$secondary: $sp-blue-dark;
+$success: $sp-green;
+$danger: $sp-red;
+$warning: $sp-amber;
+
+$body-bg: $sp-cream;
+$body-color: #102a43;
+$headings-color: #102a43;
+$link-color: $sp-blue;
+$link-hover-color: $sp-green;
+
+$font-family-sans-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+$font-size-base: 0.95rem;
+
+$border-radius: 0.625rem;
+$border-radius-sm: 0.5rem;
+$border-radius-lg: 0.875rem;
+
+$sidebar-width: 260px;
