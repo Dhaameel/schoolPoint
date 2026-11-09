@@ -97,6 +97,10 @@ teacher
 
 The owner, head teacher and managers all use the `admin` role.
 
+Users log in with a unique username. E-mail is optional and is not used in
+version 1: no login by e-mail, no e-mail verification and no e-mail password
+reset. The username is required and unique.
+
 ### 3.1 Admin accounts
 
 Admins can manage the whole school:
@@ -128,31 +132,41 @@ Artisan commands:
 app:create-admin
 app:reset-password
 app:disable-two-factor
+app:fees-reconcile
 ```
 
 `app:create-admin`:
 
-- prompts for name, e-mail and password;
+- prompts for name, username and password;
 - creates an admin account;
 - assigns `role = admin`;
 - optionally marks the password as temporary.
 
 `app:reset-password`:
 
-- takes an e-mail address;
+- takes a username;
 - sets a new password;
 - marks `must_change_password = true`;
 - never prints the existing password.
 
 `app:disable-two-factor`:
 
-- takes an e-mail address;
+- takes a username;
 - clears the two-factor secret, confirmation and recovery codes;
 - leaves the account password unchanged.
 
+`app:fees-reconcile`:
+
+- scans fees in chunks or by id range;
+- recalculates `amount_paid` from payment and reversal rows;
+- reports mismatches before and after correction;
+- supports `--dry-run`;
+- writes an audit log entry when it changes a fee.
+
 Login protection:
 
-- rate-limit login attempts by e-mail address and IP address;
+- log in by username and password;
+- rate-limit login attempts by username and IP address;
 - use Laravel's rate limiter and throttling middleware;
 - return a generic error for wrong credentials;
 - log authentication failures without logging passwords.
@@ -163,11 +177,12 @@ Teachers receive logins created by an admin.
 
 When an admin creates a teacher:
 
-1. A user record and a teacher record are created.
-2. A temporary password is generated.
-3. The temporary password is shown to the admin once.
-4. The teacher must change the password at first login.
-5. The temporary password is never stored in plain text.
+1. The admin chooses the teacher's unique username.
+2. A user record and a teacher record are created.
+3. A temporary password is generated.
+4. The temporary password is shown to the admin once.
+5. The teacher must change the password at first login.
+6. The temporary password is never stored in plain text.
 
 Admin controls for a teacher:
 
@@ -387,7 +402,8 @@ Conventions:
 |---|---|---|
 | `id` | bigint unsigned | primary key |
 | `name` | string | required |
-| `email` | string | unique |
+| `username` | string | required, unique, login identifier |
+| `email` | string nullable | optional, not used in v1 |
 | `password` | string | hashed |
 | `role` | string | `admin` or `teacher` |
 | `must_change_password` | boolean | default `false` |
@@ -403,7 +419,8 @@ Conventions:
 Indexes:
 
 ```text
-unique(email)
+unique(username)
+index(email)
 index(role)
 index(is_active)
 ```
@@ -420,6 +437,7 @@ No hard deletes.
 | `user_id` | bigint unsigned | unique, FK → `users.id` |
 | `employee_number` | string nullable | unique when present |
 | `phone` | string nullable | |
+| `photo_path` | string nullable | |
 | `status` | string | `active` or `inactive` |
 | `created_at` | timestamp | |
 | `updated_at` | timestamp | |
@@ -453,6 +471,7 @@ No hard deletes. Set `status = inactive`.
 | `date_of_birth` | date nullable | |
 | `guardian_name` | string | required |
 | `guardian_phone` | string | required |
+| `photo_path` | string nullable | |
 | `class_id` | bigint unsigned | FK → `school_classes.id` |
 | `status` | string | `active`, `graduated`, `left` |
 | `student_year` | integer | year used in the ID |
@@ -567,7 +586,7 @@ Foreign keys: none.
 | `id` | bigint unsigned | primary key |
 | `class_id` | bigint unsigned | FK → `school_classes.id` |
 | `subject_id` | bigint unsigned | FK → `subjects.id` |
-| `teacher_id` | bigint unsigned | FK → `teachers.id` |
+| `teacher_id` | bigint unsigned nullable | FK → `teachers.id` |
 | `created_at` | timestamp | |
 | `updated_at` | timestamp | |
 
@@ -587,7 +606,8 @@ subject_id → subjects.id ON DELETE RESTRICT ON UPDATE RESTRICT
 teacher_id → teachers.id ON DELETE RESTRICT ON UPDATE RESTRICT
 ```
 
-One teacher is assigned per subject per class. Reassigning is an update.
+One teacher may be assigned per subject per class. The teacher is nullable, so a
+class subject can exist before a teacher is chosen. Reassigning is an update.
 
 ### 6.8 `attendance`
 
@@ -659,10 +679,11 @@ class_id → school_classes.id ON DELETE RESTRICT ON UPDATE RESTRICT
 |---|---|---|
 | `id` | bigint unsigned | primary key |
 | `student_id` | bigint unsigned | FK → `students.id` |
+| `class_id` | bigint unsigned | FK → `school_classes.id`, copied at billing time |
 | `fee_structure_id` | bigint unsigned nullable | FK → `fee_structures.id` |
 | `title` | string | required |
 | `amount` | decimal(12,2) | required |
-| `amount_paid` | decimal(12,2) | default `0.00` |
+| `amount_paid` | decimal(12,2) | default `0.00`, recalculated inside the locked payment transaction |
 | `currency` | char(3) | copied from the structure |
 | `status` | string | `unpaid`, `partial`, `paid`, `void` |
 | `due_date` | date nullable | |
@@ -677,6 +698,7 @@ Indexes:
 ```text
 unique(student_id, fee_structure_id)
 index(student_id)
+index(class_id)
 index(fee_structure_id)
 index(status)
 index(due_date)
@@ -686,6 +708,7 @@ Foreign keys:
 
 ```text
 student_id → students.id ON DELETE RESTRICT ON UPDATE RESTRICT
+class_id → school_classes.id ON DELETE RESTRICT ON UPDATE RESTRICT
 fee_structure_id → fee_structures.id ON DELETE RESTRICT ON UPDATE RESTRICT
 ```
 
@@ -789,6 +812,10 @@ student_id_prefix
 receipt_prefix
 timezone
 ```
+
+The application timezone is read from `settings.timezone` at boot. The
+package-level default is a fallback only. All "today" checks use the configured
+timezone, not the server timezone and not UTC blindly.
 
 ---
 
@@ -900,7 +927,7 @@ Bill the whole class:
 1. Admin selects a fee structure.
 2. Action loads all active students in that class.
 3. It creates one fee per student.
-4. It copies amount and currency onto each fee.
+4. It copies amount, currency and class_id onto each fee.
 5. It skips students who already have that fee structure.
 6. The unique `(student_id, fee_structure_id)` index prevents duplicates.
 7. It writes one audit entry with the count.
@@ -915,9 +942,11 @@ Record a payment:
 6. Reject zero, negative or over-balance amounts.
 7. Create the payment.
 8. Generate the receipt number inside the transaction.
-9. Recalculate `amount_paid` and `status`.
-10. Write the audit log.
-11. Commit.
+9. Recalculate `fees.amount_paid` from all payment and reversal rows while
+   the fee row is still locked.
+10. Recalculate `status` from the new `amount_paid`.
+11. Write the audit log.
+12. Commit.
 
 Receipt format:
 
@@ -938,8 +967,10 @@ Reversal:
 3. Reject a second reversal of the same payment.
 4. Require a reason.
 5. Create a reversal row.
-6. Recalculate the fee balance and status.
-7. Write the audit log.
+6. Recalculate `amount_paid` from all payment and reversal rows while the fee
+   row is still locked.
+7. Recalculate the fee status.
+8. Write the audit log.
 
 Void:
 
@@ -953,6 +984,11 @@ Void:
 8. Write the audit log.
 
 Money is stored as `DECIMAL(12,2)` and calculated with `bcmath`.
+
+`app:fees-reconcile` detects and repairs `amount_paid` values that do not
+match the payment rows. Tests must prove that a deliberately corrupted
+`amount_paid` is detected, that the command repairs it, and that the corrected
+value matches the sum of payments minus reversals.
 
 ### 7.6 Reports
 
@@ -1115,6 +1151,9 @@ lang/ar/
 
 Rules:
 
+- English ships complete in version 1;
+- `lang/so` and `lang/ar` are present and wired but intentionally untranslated;
+- no machine translation is added;
 - no hardcoded UI text in Blade or controllers;
 - validation messages use language keys;
 - date and currency formats come from settings or locale helpers;
@@ -1158,16 +1197,22 @@ Important tests:
 - teacher cannot open fees or settings
 - teacher cannot mark attendance for another class
 - teacher cannot edit yesterday
+- teacher "today only" still works across midnight in the configured timezone
 - admin can edit any date
 - duplicate attendance for `(student, date)` is rejected
 - student ID is unique and sequential
 - students cannot be hard-deleted
+- student and teacher photo_path are optional
+- login uses username, not e-mail
+- artisan commands accept a username
 - billing a class twice does not duplicate fees
 - two payment attempts cannot overpay
 - duplicate payment reference records once
 - receipt number is unique and follows the format
 - reversal restores balance
 - void requires no net payments and a reason
+- `app:fees-reconcile` detects and repairs an incorrect `amount_paid`
+- payments and reversals recalculate `amount_paid` inside the locked transaction
 - every report respects the selected date range
 - CSV and print views contain the same figures
 
@@ -1206,20 +1251,29 @@ stage-1-foundation-green
 Scope:
 
 - MySQL configuration
-- final theme using the stated palette and the approved reference screens
-- final login page and authentication screens
-- final application layout, sidebar and top bar
-- Bootstrap 5.3, Vite, Inter and Bootstrap Icons
-- admin and teacher authentication
+- Bootstrap 5.3, Vite, Inter and Bootstrap Icons from npm
+- one SCSS variables file containing the palette
+- split-screen login page using username and password
+- final application shell: top bar and role-specific sidebar
+- admin sidebar: Dashboard, Students, Teachers, Classes, Subjects, Attendance, Fees, Reports, Settings
+- teacher sidebar: Dashboard, My classes, Attendance
+- sidebar collapses to a menu button on phones
+- users table with unique username and optional unused e-mail
+- login, logout and session handling
+- login rate limiting by username and IP
+- forced password change after a temporary password
 - optional admin TOTP 2FA and recovery codes
-- forced password change at first teacher login
-- deactivated teacher login block
-- login rate limiting
 - `app:create-admin`, `app:reset-password`, `app:disable-two-factor`
-- settings table and settings page
-- audit log base
-- language files and translation helper
-- tests for auth, 2FA, commands, settings and audit
+- Settings page: school name, logo, currency, ID prefix, receipt prefix, timezone
+- settings timezone applied at boot
+- audit log helper
+- English language files complete
+- `lang/so` and `lang/ar` present but untranslated
+- empty-state placeholder pages for every menu item
+- migrations and `migrate --seed` creates no users
+- tests for auth, rate limiting, password change, 2FA, commands, settings, timezone and audit
+- screenshots of login and app shell at desktop and phone widths
+- tag and push to the private repository
 
 Every later stage is built on this finished look.
 
@@ -1253,9 +1307,10 @@ Scope:
 
 - daily class roster
 - one row per student per day
-- teacher today-only rule
+- teacher today-only rule using the configured timezone
 - admin any-date rule
 - attendance summary
+- midnight boundary test for the teacher "today only" rule
 - tests for uniqueness and policy rules
 
 ### Stage 4 — Fees
@@ -1271,11 +1326,14 @@ Scope:
 - fee structures
 - bill-the-whole-class action
 - duplicate-billing protection
+- `fees.class_id` copied at billing time
 - payments with row lock and one-time reference
 - receipt numbers
 - reversals and voids
 - currency per fee
 - audit log
+- `app:fees-reconcile`
+- reconcile mismatch test
 - concurrency test
 
 ### Stage 5 — Reports
