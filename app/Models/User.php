@@ -46,6 +46,11 @@ class User extends Authenticatable
         ];
     }
 
+    public function teacher()
+    {
+        return $this->hasOne(Teacher::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SubjectController;
+use App\Http\Controllers\Admin\TeacherController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\TwoFactorChallengeController;
@@ -38,9 +39,11 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::get('/students', [PlaceholderController::class, 'admin'])
             ->defaults('section', 'students')
             ->name('students.index');
-        Route::get('/teachers', [PlaceholderController::class, 'admin'])
-            ->defaults('section', 'teachers')
-            ->name('teachers.index');
+        Route::get('/teachers/slip', [TeacherController::class, 'slip'])->name('teachers.slip');
+        Route::post('/teachers/{teacher}/reset-password', [TeacherController::class, 'resetPassword'])->name('teachers.reset-password');
+        Route::post('/teachers/{teacher}/deactivate', [TeacherController::class, 'deactivate'])->name('teachers.deactivate');
+        Route::post('/teachers/{teacher}/reactivate', [TeacherController::class, 'reactivate'])->name('teachers.reactivate');
+        Route::resource('/teachers', TeacherController::class);
         Route::get('/classes', [PlaceholderController::class, 'admin'])
             ->defaults('section', 'classes')
             ->name('classes.index');
