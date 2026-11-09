@@ -1,22 +1,24 @@
 # schoolPoint — Architecture and Rebuild Plan
 
-Status: **Stage 0 — plan only. No application features have been built.**
+Status: **Stage 0 — plan approved with changes. Stage 1 has not started.**
 
-This document is the approval gate. Stage 1 must not begin until the product owner approves this plan.
+This document is the approval gate for the rebuild.
 
-The new application is a fresh Laravel 13 project at:
-
-```text
-C:\dev\schoolpoint
-```
-
-It has its own Git repository. No file from the old repository was copied into it. The old repository was tagged:
+The old repository was tagged:
 
 ```text
 full-version-green
 ```
 
-The old code is reference material only. Ideas that may be reused:
+The old repository is reference material only. The new application is a fresh Laravel 13 project at:
+
+```text
+C:\dev\schoolpoint
+```
+
+It has its own Git repository. No file from the old repository was copied into it.
+
+Reusable ideas from the old code:
 
 - fee payment row locking
 - one-time payment references
@@ -47,10 +49,11 @@ It does not manage:
 - student or guardian logins
 - multiple schools or tenants
 - a permissions package
-- a repository/interface layer
+- a repository or interface layer
 - Docker
 - online payment gateways
 - a library, payroll or messaging module
+- an e-mail service in version 1
 
 ---
 
@@ -94,18 +97,69 @@ teacher
 
 The owner, head teacher and managers all use the `admin` role.
 
-### Admin
+### 3.1 Admin accounts
 
-The admin can manage the whole school:
+Admins can manage the whole school:
 
 ```text
 students, teachers, classes, subjects, attendance,
-fees, reports and settings
+fees, reports, settings, admin accounts
 ```
 
-### Teacher
+Admin accounts support optional TOTP two-factor authentication:
 
-Teacher accounts are created by an admin.
+- package: `pragmarx/google2fa`
+- QR code drawn inside the application
+- recovery codes generated once and stored encrypted
+- each recovery code can be used once
+- 2FA can be enabled or disabled from the Security page
+- 2FA is optional per admin account
+
+Password resets in version 1 are handled without e-mail:
+
+- an admin can reset another admin or teacher password;
+- a server operator can reset a password with an artisan command.
+
+Version 1 needs no e-mail service, no password-reset mail route and no SMTP configuration.
+
+Artisan commands:
+
+```text
+app:create-admin
+app:reset-password
+app:disable-two-factor
+```
+
+`app:create-admin`:
+
+- prompts for name, e-mail and password;
+- creates an admin account;
+- assigns `role = admin`;
+- optionally marks the password as temporary.
+
+`app:reset-password`:
+
+- takes an e-mail address;
+- sets a new password;
+- marks `must_change_password = true`;
+- never prints the existing password.
+
+`app:disable-two-factor`:
+
+- takes an e-mail address;
+- clears the two-factor secret, confirmation and recovery codes;
+- leaves the account password unchanged.
+
+Login protection:
+
+- rate-limit login attempts by e-mail address and IP address;
+- use Laravel's rate limiter and throttling middleware;
+- return a generic error for wrong credentials;
+- log authentication failures without logging passwords.
+
+### 3.2 Teacher accounts
+
+Teachers receive logins created by an admin.
 
 When an admin creates a teacher:
 
@@ -115,6 +169,18 @@ When an admin creates a teacher:
 4. The teacher must change the password at first login.
 5. The temporary password is never stored in plain text.
 
+Admin controls for a teacher:
+
+- deactivate the teacher;
+- reactivate the teacher;
+- reset the teacher password.
+
+A deactivated teacher:
+
+- cannot log in;
+- has existing sessions invalidated where practical;
+- keeps their records for reports and history.
+
 Teacher access is limited to:
 
 ```text
@@ -123,9 +189,25 @@ My classes
 Attendance
 ```
 
-A teacher can mark attendance only for classes and subjects assigned to them.
+A teacher sees only classes where they are:
 
-### Students and guardians
+- the class teacher (`school_classes.class_teacher_id`), or
+- a subject teacher (`class_subject.teacher_id`).
+
+A teacher has no access to:
+
+```text
+fees
+settings
+admin reports
+student management
+teacher management
+class or subject management
+```
+
+Policy tests must prove these restrictions.
+
+### 3.3 Students and guardians
 
 Students and guardians do not have logins.
 
@@ -140,18 +222,19 @@ A student is a record with:
 
 Guardians are not separate login accounts.
 
-### Authorization
+### 3.4 Authorization
 
-Authorization is implemented with Laravel Policies.
+Authorization uses Laravel Policies.
 
 There is no `spatie/laravel-permission`, no roles table and no permissions table.
 
 Rules:
 
 - `admin` passes every policy.
-- `teacher` passes only policies for their own assigned classes and today's attendance.
+- `teacher` passes only policies for assigned classes and today's attendance.
 - Every controller action is protected by a Policy or an explicit admin check.
-- No policy relies on a package.
+- Policies never rely on a permissions package.
+- Deactivated users fail authentication before policy checks.
 
 ---
 
@@ -203,9 +286,9 @@ Layer rules:
 - No repository layer.
 - No interface layer.
 - No service container indirection unless Laravel needs it.
-- Controllers are thin. They validate through a FormRequest, call an Action or model, and return a view or redirect.
+- Controllers are thin.
 - Multi-step operations go into one Action class.
-- Business rules that affect one record may live on the model.
+- Business rules affecting one record may live on the model.
 - Policies contain authorization only.
 - FormRequests contain validation and authorization hand-off only.
 
@@ -218,6 +301,7 @@ app/
 │  ├─ Fees/
 │  ├─ Students/
 │  └─ Teachers/
+├─ Console/Commands/
 ├─ Http/
 │  ├─ Controllers/
 │  │  ├─ Admin/
@@ -286,65 +370,141 @@ No hardcoded labels in Blade or controllers. Arabic readiness includes `dir="rtl
 
 ## 6. Database
 
-All tables use `id`, `created_at` and `updated_at` unless noted.
+Conventions:
 
-### `users`
+- all tables use `id`, `created_at` and `updated_at` unless noted;
+- money is `DECIMAL(12,2)`, never float;
+- academic and fee records use foreign keys with `ON DELETE RESTRICT` and `ON UPDATE RESTRICT`;
+- students, teachers and fees are never hard-deleted;
+- students use `status`;
+- teachers use `status`;
+- fees use `status = void` and `void_reason`;
+- academic and fee history must remain readable.
 
-| Column | Type | Notes |
+### 6.1 `users`
+
+| Column | Type | Rules |
 |---|---|---|
-| `name` | string | login name |
+| `id` | bigint unsigned | primary key |
+| `name` | string | required |
 | `email` | string | unique |
 | `password` | string | hashed |
 | `role` | string | `admin` or `teacher` |
 | `must_change_password` | boolean | default `false` |
 | `is_active` | boolean | default `true` |
+| `two_factor_secret` | text nullable | encrypted |
+| `two_factor_recovery_codes` | text nullable | encrypted array |
+| `two_factor_confirmed_at` | timestamp nullable | |
+| `last_login_at` | timestamp nullable | |
 | `remember_token` | string nullable | Laravel |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
 
-No hard deletes. Deactivate with `is_active`.
+Indexes:
 
-### `teachers`
+```text
+unique(email)
+index(role)
+index(is_active)
+```
 
-| Column | Type | Notes |
+Foreign keys: none.
+
+No hard deletes.
+
+### 6.2 `teachers`
+
+| Column | Type | Rules |
 |---|---|---|
-| `user_id` | foreign key | unique, references `users` |
+| `id` | bigint unsigned | primary key |
+| `user_id` | bigint unsigned | unique, FK → `users.id` |
 | `employee_number` | string nullable | unique when present |
 | `phone` | string nullable | |
 | `status` | string | `active` or `inactive` |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
 
-No hard deletes. Set `status` to `inactive`.
+Indexes:
 
-### `students`
+```text
+unique(user_id)
+unique(employee_number)
+index(status)
+```
 
-| Column | Type | Notes |
+Foreign keys:
+
+```text
+user_id → users.id ON DELETE RESTRICT ON UPDATE RESTRICT
+```
+
+No hard deletes. Set `status = inactive`.
+
+### 6.3 `students`
+
+| Column | Type | Rules |
 |---|---|---|
+| `id` | bigint unsigned | primary key |
 | `student_id` | string | unique, generated |
-| `admission_number` | string nullable | optional |
-| `first_name` | string | |
-| `last_name` | string | |
+| `admission_number` | string nullable | unique when present |
+| `first_name` | string | required |
+| `last_name` | string | required |
 | `gender` | string nullable | |
 | `date_of_birth` | date nullable | |
-| `guardian_name` | string | |
-| `guardian_phone` | string | |
-| `class_id` | foreign key | references `school_classes` |
+| `guardian_name` | string | required |
+| `guardian_phone` | string | required |
+| `class_id` | bigint unsigned | FK → `school_classes.id` |
 | `status` | string | `active`, `graduated`, `left` |
 | `student_year` | integer | year used in the ID |
 | `student_sequence` | integer | sequence used in the ID |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
 
 Indexes:
 
 ```text
 unique(student_id)
+unique(admission_number)
 unique(student_year, student_sequence)
 index(class_id, status)
+index(status)
 ```
 
-No hard deletes. Status is changed instead.
-
-Student ID format:
+Foreign keys:
 
 ```text
-{PREFIX}-{YEAR}-{SEQUENCE}
+class_id → school_classes.id ON DELETE RESTRICT ON UPDATE RESTRICT
 ```
+
+No hard deletes. Change `status` instead.
+
+### 6.4 `student_id_counters`
+
+| Column | Type | Rules |
+|---|---|---|
+| `id` | bigint unsigned | primary key |
+| `year` | integer | unique |
+| `last_sequence` | integer unsigned | default `0` |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
+
+Indexes:
+
+```text
+unique(year)
+```
+
+Foreign keys: none.
+
+Student ID generation:
+
+1. Start a database transaction.
+2. `SELECT ... FOR UPDATE` the counter row for the current year.
+3. Increment `last_sequence`.
+4. Format `{PREFIX}-{YEAR}-{SEQUENCE}`.
+5. Insert the student.
+6. Commit.
+7. The unique index on `students.student_id` is the final guard.
 
 Example:
 
@@ -352,149 +512,272 @@ Example:
 SP-2026-000001
 ```
 
-- `PREFIX` comes from `settings.student_id_prefix`.
-- `YEAR` is the current year.
-- `SEQUENCE` is zero-padded and unique per year.
-- Generation runs inside a transaction and locks the sequence source.
-- A unique index is the final guard against duplicates.
+### 6.5 `school_classes`
 
-### `school_classes`
-
-| Column | Type | Notes |
+| Column | Type | Rules |
 |---|---|---|
+| `id` | bigint unsigned | primary key |
 | `name` | string | unique |
 | `code` | string nullable | unique when present |
+| `class_teacher_id` | bigint unsigned nullable | FK → `teachers.id` |
 | `status` | string | `active` or `archived` |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
+
+Indexes:
+
+```text
+unique(name)
+unique(code)
+index(class_teacher_id)
+index(status)
+```
+
+Foreign keys:
+
+```text
+class_teacher_id → teachers.id ON DELETE RESTRICT ON UPDATE RESTRICT
+```
 
 No sections. A class is one class.
 
-### `subjects`
+### 6.6 `subjects`
 
-| Column | Type | Notes |
+| Column | Type | Rules |
 |---|---|---|
+| `id` | bigint unsigned | primary key |
 | `name` | string | unique |
 | `code` | string nullable | unique when present |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
 
-### `class_subject`
+Indexes:
 
-| Column | Type | Notes |
+```text
+unique(name)
+unique(code)
+```
+
+Foreign keys: none.
+
+### 6.7 `class_subject`
+
+| Column | Type | Rules |
 |---|---|---|
-| `class_id` | foreign key | |
-| `subject_id` | foreign key | |
-| `teacher_id` | foreign key | references `teachers` |
+| `id` | bigint unsigned | primary key |
+| `class_id` | bigint unsigned | FK → `school_classes.id` |
+| `subject_id` | bigint unsigned | FK → `subjects.id` |
+| `teacher_id` | bigint unsigned | FK → `teachers.id` |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
 
-Rules:
+Indexes:
 
 ```text
 unique(class_id, subject_id)
+index(teacher_id)
+index(subject_id)
+```
+
+Foreign keys:
+
+```text
+class_id → school_classes.id ON DELETE RESTRICT ON UPDATE RESTRICT
+subject_id → subjects.id ON DELETE RESTRICT ON UPDATE RESTRICT
+teacher_id → teachers.id ON DELETE RESTRICT ON UPDATE RESTRICT
 ```
 
 One teacher is assigned per subject per class. Reassigning is an update.
 
-### `attendance`
+### 6.8 `attendance`
 
-| Column | Type | Notes |
+| Column | Type | Rules |
 |---|---|---|
-| `student_id` | foreign key | |
-| `class_id` | foreign key | |
-| `date` | date | |
+| `id` | bigint unsigned | primary key |
+| `student_id` | bigint unsigned | FK → `students.id` |
+| `class_id` | bigint unsigned | FK → `school_classes.id` |
+| `date` | date | required |
 | `status` | string | `present`, `absent`, `late` |
-| `marked_by` | foreign key | references `users` |
+| `marked_by` | bigint unsigned | FK → `users.id` |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
 
-Rules:
+Indexes:
 
 ```text
 unique(student_id, date)
+index(date)
 index(class_id, date)
+index(marked_by)
 ```
 
-- One row per student per day.
-- Teachers can create and edit only today's attendance.
-- Admins can create and edit any date.
-- Attendance is never hard-deleted.
+Foreign keys:
 
-### `fee_structures`
-
-| Column | Type | Notes |
-|---|---|---|
-| `class_id` | foreign key | |
-| `name` | string | e.g. Term 1 tuition |
-| `amount` | decimal(12,2) | |
-| `currency` | char(3) | copied to each fee |
-| `is_active` | boolean | default `true` |
+```text
+student_id → students.id ON DELETE RESTRICT ON UPDATE RESTRICT
+class_id → school_classes.id ON DELETE RESTRICT ON UPDATE RESTRICT
+marked_by → users.id ON DELETE RESTRICT ON UPDATE RESTRICT
+```
 
 Rules:
 
+- one row per student per day;
+- teachers create and edit today only;
+- admins create and edit any date;
+- attendance is never hard-deleted.
+
+### 6.9 `fee_structures`
+
+| Column | Type | Rules |
+|---|---|---|
+| `id` | bigint unsigned | primary key |
+| `class_id` | bigint unsigned | FK → `school_classes.id` |
+| `name` | string | required |
+| `amount` | decimal(12,2) | required |
+| `currency` | char(3) | required |
+| `is_active` | boolean | default `true` |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
+
+Indexes:
+
 ```text
 unique(class_id, name, currency)
+index(class_id)
+index(is_active)
 ```
 
-### `fees`
+Foreign keys:
 
-| Column | Type | Notes |
+```text
+class_id → school_classes.id ON DELETE RESTRICT ON UPDATE RESTRICT
+```
+
+### 6.10 `fees`
+
+| Column | Type | Rules |
 |---|---|---|
-| `student_id` | foreign key | |
-| `fee_structure_id` | foreign key nullable | null for a manual fee |
-| `title` | string | |
-| `amount` | decimal(12,2) | |
+| `id` | bigint unsigned | primary key |
+| `student_id` | bigint unsigned | FK → `students.id` |
+| `fee_structure_id` | bigint unsigned nullable | FK → `fee_structures.id` |
+| `title` | string | required |
+| `amount` | decimal(12,2) | required |
 | `amount_paid` | decimal(12,2) | default `0.00` |
-| `currency` | char(3) | stored on the fee |
+| `currency` | char(3) | copied from the structure |
 | `status` | string | `unpaid`, `partial`, `paid`, `void` |
 | `due_date` | date nullable | |
 | `billed_at` | datetime nullable | |
 | `voided_at` | datetime nullable | |
-| `void_reason` | text nullable | |
+| `void_reason` | text nullable | required when voiding |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
 
-Rules:
+Indexes:
 
 ```text
 unique(student_id, fee_structure_id)
+index(student_id)
+index(fee_structure_id)
+index(status)
+index(due_date)
 ```
 
-A null `fee_structure_id` allows multiple manual fees for the same student.
+Foreign keys:
+
+```text
+student_id → students.id ON DELETE RESTRICT ON UPDATE RESTRICT
+fee_structure_id → fee_structures.id ON DELETE RESTRICT ON UPDATE RESTRICT
+```
+
+The unique `(student_id, fee_structure_id)` prevents billing the same class twice from creating duplicate fees. A null `fee_structure_id` allows manual fees; MySQL permits multiple NULL values in a unique index.
 
 No hard deletes. Fees are voided with a reason.
 
-### `fee_payments`
+### 6.11 `fee_payments`
 
-| Column | Type | Notes |
+| Column | Type | Rules |
 |---|---|---|
-| `fee_id` | foreign key | |
+| `id` | bigint unsigned | primary key |
+| `fee_id` | bigint unsigned | FK → `fees.id` |
 | `reference` | string | unique, one-time |
 | `receipt_number` | string | unique |
-| `amount` | decimal(12,2) | |
+| `amount` | decimal(12,2) | required |
 | `type` | string | `payment` or `reversal` |
-| `reversal_of_id` | foreign key nullable | unique, references `fee_payments` |
+| `reversal_of_id` | bigint unsigned nullable | unique, FK → `fee_payments.id` |
 | `reason` | text nullable | required on reversal |
-| `paid_at` | datetime | |
+| `paid_at` | datetime | required |
 | `method` | string nullable | cash, bank, mobile money |
 | `note` | text nullable | |
-| `created_by` | foreign key | references `users` |
+| `created_by` | bigint unsigned | FK → `users.id` |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
 
-No update or delete routes. A mistake is corrected by a reversal.
+Indexes:
 
-### `audit_logs`
+```text
+unique(reference)
+unique(receipt_number)
+unique(reversal_of_id)
+index(fee_id)
+index(paid_at)
+index(created_by)
+```
 
-| Column | Type | Notes |
+Foreign keys:
+
+```text
+fee_id → fees.id ON DELETE RESTRICT ON UPDATE RESTRICT
+reversal_of_id → fee_payments.id ON DELETE RESTRICT ON UPDATE RESTRICT
+created_by → users.id ON DELETE RESTRICT ON UPDATE RESTRICT
+```
+
+No update or delete routes. Mistakes are corrected by a reversal.
+
+### 6.12 `audit_logs`
+
+| Column | Type | Rules |
 |---|---|---|
-| `user_id` | foreign key nullable | |
-| `action` | string | e.g. `fees.payment_recorded` |
+| `id` | bigint unsigned | primary key |
+| `user_id` | bigint unsigned nullable | FK → `users.id` |
+| `action` | string | required |
 | `description` | text nullable | |
 | `metadata` | json nullable | ids, amounts, reasons |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
 
 Indexes:
 
 ```text
 index(action)
 index(created_at)
+index(user_id)
 ```
 
-### `settings`
+Foreign keys:
 
-| Column | Type | Notes |
+```text
+user_id → users.id ON DELETE RESTRICT ON UPDATE RESTRICT
+```
+
+Audit logs never store passwords or password hashes.
+
+### 6.13 `settings`
+
+| Column | Type | Rules |
 |---|---|---|
+| `id` | bigint unsigned | primary key |
 | `key` | string | unique |
 | `value` | text nullable | |
+| `created_at` | timestamp | |
+| `updated_at` | timestamp | |
+
+Indexes:
+
+```text
+unique(key)
+```
+
+Foreign keys: none.
 
 Example keys:
 
@@ -511,7 +794,38 @@ timezone
 
 ## 7. Business rules
 
-### 7.1 Teacher account creation
+### 7.1 Admin 2FA and commands
+
+Admins can enable TOTP from the Security page.
+
+Flow:
+
+1. Generate a secret with `pragmarx/google2fa`.
+2. Draw the QR code inside the application.
+3. Show the secret for manual entry.
+4. Confirm with a 6-digit code.
+5. Generate recovery codes once.
+6. Store secret and recovery codes encrypted.
+7. At login, ask for a code only when 2FA is confirmed.
+8. A recovery code is removed after use.
+
+Artisan commands:
+
+```text
+app:create-admin
+app:reset-password
+app:disable-two-factor
+```
+
+No e-mail service is required in version 1.
+
+Login rate limiting:
+
+- throttle failed logins by e-mail and IP;
+- use a generic error message;
+- never log the submitted password.
+
+### 7.2 Teacher account creation and deactivation
 
 Action: `CreateTeacherAccountAction`
 
@@ -519,27 +833,44 @@ Action: `CreateTeacherAccountAction`
 2. Action creates the `users` row with role `teacher`.
 3. Action creates the `teachers` row.
 4. A random temporary password is generated.
-5. The password is hashed and stored.
+5. The password is hashed.
 6. The plain temporary password is returned once for display.
 7. `must_change_password` is set to `true`.
 8. Audit log records `teachers.created`.
 9. At first login, middleware redirects to the password-change page.
 10. The teacher cannot open any other page until the password is changed.
 
-### 7.2 Student creation
+Admin can deactivate a teacher:
+
+- set `teachers.status = inactive`;
+- set `users.is_active = false`;
+- audit log `teachers.deactivated`.
+
+A deactivated teacher cannot log in.
+
+Admin can reset a teacher password:
+
+- generate or accept a temporary password;
+- hash it;
+- set `must_change_password = true`;
+- audit log `teachers.password_reset`.
+
+### 7.3 Student creation
 
 Action: `CreateStudentAction`
 
 1. Admin submits student details and class.
-2. Action starts a database transaction.
-3. It generates the next student ID sequence for the year.
-4. It inserts the student with status `active`.
-5. It writes an audit log entry.
-6. It commits.
+2. Start a transaction.
+3. Lock the `student_id_counters` row for the year.
+4. Increment the sequence.
+5. Generate `{PREFIX}-{YEAR}-{SEQUENCE}`.
+6. Insert the student with status `active`.
+7. Write an audit log entry.
+8. Commit.
 
 No delete route exists.
 
-### 7.3 Attendance
+### 7.4 Attendance
 
 Action: `MarkAttendanceAction`
 
@@ -553,7 +884,7 @@ Action: `MarkAttendanceAction`
 8. Admins can open and correct any date.
 9. Audit log records the class, date and marker.
 
-### 7.4 Fees
+### 7.5 Fees
 
 Actions:
 
@@ -571,7 +902,8 @@ Bill the whole class:
 3. It creates one fee per student.
 4. It copies amount and currency onto each fee.
 5. It skips students who already have that fee structure.
-6. It writes one audit entry with the count.
+6. The unique `(student_id, fee_structure_id)` index prevents duplicates.
+7. It writes one audit entry with the count.
 
 Record a payment:
 
@@ -620,9 +952,9 @@ Void:
 7. Exclude voided fees from totals.
 8. Write the audit log.
 
-Money is stored as `DECIMAL(12,2)` and calculated with `bcmath`. No floats.
+Money is stored as `DECIMAL(12,2)` and calculated with `bcmath`.
 
-### 7.5 Reports
+### 7.6 Reports
 
 One reusable date-range component:
 
@@ -669,13 +1001,28 @@ HTML print view
 CSV download
 ```
 
-### 7.6 Audit
+Report indexes:
+
+```text
+attendance.date
+fee_payments.paid_at
+fees.due_date
+```
+
+### 7.7 Audit
 
 Audit actions include:
 
 ```text
+admins.created
+admins.password_reset
+admins.two_factor_enabled
+admins.two_factor_disabled
 teachers.created
 teachers.updated
+teachers.deactivated
+teachers.reactivated
+teachers.password_reset
 students.created
 students.updated
 students.status_changed
@@ -698,7 +1045,39 @@ Audit metadata stores IDs, amounts, dates and reasons. It never stores passwords
 
 ---
 
-## 8. UI rules
+## 8. Backups
+
+Version 1 must document:
+
+- a daily `mysqldump` backup;
+- retention of at least 14 daily files;
+- backup location outside the web root;
+- file permissions that protect the dump;
+- a restore rehearsal in Stage 7.
+
+Example daily command:
+
+```sh
+mysqldump \
+  --single-transaction \
+  --routines \
+  --triggers \
+  --set-gtid-purged=OFF \
+  -u schoolpoint -p schoolpoint \
+  | gzip > /var/backups/schoolpoint/schoolpoint-$(date +%F).sql.gz
+```
+
+Example cron entry:
+
+```cron
+0 2 * * * /usr/local/bin/schoolpoint-backup.sh >> /var/log/schoolpoint-backup.log 2>&1
+```
+
+Stage 7 must include an actual restore rehearsal into a temporary database, a smoke test, and removal of the temporary database.
+
+---
+
+## 9. UI rules
 
 - Bootstrap 5.3 from npm, bundled by Vite.
 - Inter self-hosted through `@fontsource/inter`.
@@ -718,9 +1097,32 @@ Audit metadata stores IDs, amounts, dates and reasons. It never stores passwords
 - Currency comes from settings and is stored on each fee.
 - Arabic readiness: language files and `dir` support.
 
+The final theme, login page and application layout are built in Stage 1 from the stated palette and the approved reference screens, before any module page. Every later stage is built on the finished look.
+
 ---
 
-## 9. Testing strategy
+## 10. Localization
+
+All user-facing text is loaded with `__()`.
+
+Initial language files:
+
+```text
+lang/en/
+lang/so/
+lang/ar/
+```
+
+Rules:
+
+- no hardcoded UI text in Blade or controllers;
+- validation messages use language keys;
+- date and currency formats come from settings or locale helpers;
+- Arabic layout must support right-to-left direction.
+
+---
+
+## 11. Testing strategy
 
 Tests are written per module, not at the end.
 
@@ -728,7 +1130,11 @@ Required test groups:
 
 ```text
 Auth and forced password change
+Login rate limiting
+Admin 2FA and recovery codes
+Artisan commands
 Users and teacher accounts
+Teacher deactivation and password reset
 Students and student ID generation
 Classes
 Subjects and class_subject
@@ -746,18 +1152,22 @@ Important tests:
 
 - teacher first login forces password change
 - temporary password cannot be reused after change
-- student ID is unique and sequential
-- students cannot be hard-deleted
+- deactivated teacher cannot log in
+- admin can reset a teacher password
+- teacher sees only assigned classes
+- teacher cannot open fees or settings
 - teacher cannot mark attendance for another class
 - teacher cannot edit yesterday
 - admin can edit any date
 - duplicate attendance for `(student, date)` is rejected
+- student ID is unique and sequential
+- students cannot be hard-deleted
+- billing a class twice does not duplicate fees
 - two payment attempts cannot overpay
 - duplicate payment reference records once
 - receipt number is unique and follows the format
 - reversal restores balance
 - void requires no net payments and a reason
-- teacher cannot open fees or reports
 - every report respects the selected date range
 - CSV and print views contain the same figures
 
@@ -765,11 +1175,11 @@ Both SQLite and MySQL test runs are required. The MySQL suite must include the t
 
 ---
 
-## 10. Delivery stages
+## 12. Delivery stages
 
 ### Stage 0 — Plan and scaffold
 
-Status: **current stage**
+Status: **complete, awaiting go-ahead for Stage 1**
 
 Deliverables:
 
@@ -785,9 +1195,7 @@ Tag:
 stage-0-plan-green
 ```
 
-Exit gate: product owner approval.
-
-### Stage 1 — Foundation
+### Stage 1 — Foundation, theme, login and layout
 
 Tag:
 
@@ -798,14 +1206,22 @@ stage-1-foundation-green
 Scope:
 
 - MySQL configuration
-- authentication for admin and teacher
-- forced password change
-- layouts, navigation and flash messages
+- final theme using the stated palette and the approved reference screens
+- final login page and authentication screens
+- final application layout, sidebar and top bar
+- Bootstrap 5.3, Vite, Inter and Bootstrap Icons
+- admin and teacher authentication
+- optional admin TOTP 2FA and recovery codes
+- forced password change at first teacher login
+- deactivated teacher login block
+- login rate limiting
+- `app:create-admin`, `app:reset-password`, `app:disable-two-factor`
 - settings table and settings page
 - audit log base
 - language files and translation helper
-- Vite, Bootstrap 5.3, Inter and Bootstrap Icons
-- tests for auth, settings and audit
+- tests for auth, 2FA, commands, settings and audit
+
+Every later stage is built on this finished look.
 
 ### Stage 2 — People and academics
 
@@ -818,8 +1234,8 @@ stage-2-people-green
 Scope:
 
 - students, teacher accounts, classes and subjects
-- student ID generation
-- class_subject assignments
+- student ID generation with locked counter
+- class teacher and subject teacher assignments
 - search and empty states
 - policies for admin and teacher
 - no hard deletes
@@ -854,6 +1270,7 @@ Scope:
 
 - fee structures
 - bill-the-whole-class action
+- duplicate-billing protection
 - payments with row lock and one-time reference
 - receipt numbers
 - reversals and voids
@@ -877,9 +1294,10 @@ Scope:
 - class report
 - print views
 - CSV downloads
+- report indexes
 - tests for ranges and totals
 
-### Stage 6 — UI and language polish
+### Stage 6 — Dashboards and polish
 
 Tag:
 
@@ -889,13 +1307,13 @@ stage-6-ui-green
 
 Scope:
 
-- complete Bootstrap/Vite styling
-- responsive sidebar and tables
-- search on every list
-- empty states with actions
-- all text moved to language files
-- Somali and Arabic skeleton files
+- admin dashboard
+- teacher dashboard
+- empty-state and search audit across every list
+- responsive checks
+- translation completeness
 - RTL check
+- final visual polish on the Stage 1 layout
 - browser checks on desktop and phone
 
 ### Stage 7 — Release hardening
@@ -909,7 +1327,10 @@ stage-7-release-green
 Scope:
 
 - full SQLite and MySQL suites
+- policy tests for every role
 - security review
+- daily `mysqldump` documentation
+- actual restore rehearsal into a temporary database
 - backup and restore guide
 - deployment guide
 - final browser checks
@@ -917,16 +1338,17 @@ Scope:
 
 ---
 
-## 11. Private GitHub repository
+## 13. Private GitHub repository
 
-The old repository already uses the name `schoolPoint`, so the rebuild needs a
-different name. Proposed name:
+The old repository already uses the name `schoolPoint`, so the rebuild needs a different name.
+
+Proposed private repository:
 
 ```text
-schoolpoint-rebuild
+Dhaameel/schoolpoint-rebuild
 ```
 
-Create the repository manually:
+Create it manually:
 
 1. Open `https://github.com/new`.
 2. Owner: `Dhaameel`.
@@ -935,7 +1357,7 @@ Create the repository manually:
 5. Do not add a README, `.gitignore` or license.
 6. Create the repository.
 
-Then, after approval and before pushing:
+Then:
 
 ```powershell
 cd C:\dev\schoolpoint
@@ -944,24 +1366,25 @@ git push -u origin main
 git push origin --tags
 ```
 
-GitHub authentication must be completed by the owner. Use GitHub Desktop or a
-personal access token. Never paste a token into chat.
+GitHub authentication must be completed by the owner. Never paste a token into chat.
 
-If another repository name is preferred, use that name in both the GitHub form
-and the `git remote add` command.
+If another repository name is preferred, use that name in both GitHub and the `git remote add` command.
 
 ---
 
-## 12. Approval gate
+## 14. Approval gate
 
 Stage 0 stops here.
 
-Nothing from Stage 1 will be built until the owner approves:
+Stage 1 must not begin until the owner explicitly says go.
+
+The owner must approve:
 
 - the roles and policy approach
-- the table design
+- the teacher class-teacher and subject-teacher access rules
+- the table design and foreign-key restrictions
 - the attendance rules
 - the fee rules
 - the report set
-- the stage order
-- the private GitHub repository name and owner
+- the Stage 1–7 order and tags
+- the final private repository name
