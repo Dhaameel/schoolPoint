@@ -36,6 +36,11 @@ class Student extends Model
         return $this->hasMany(Attendance::class);
     }
 
+    public function fees()
+    {
+        return $this->hasMany(Fee::class);
+    }
+
     public function getNameAttribute(): string
     {
         return trim($this->first_name.' '.$this->last_name);

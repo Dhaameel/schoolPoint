@@ -29,4 +29,14 @@ class SchoolClass extends Model
             ->withPivot('teacher_id')
             ->withTimestamps();
     }
+
+    public function feeStructures()
+    {
+        return $this->hasMany(FeeStructure::class, 'class_id');
+    }
+
+    public function fees()
+    {
+        return $this->hasMany(Fee::class, 'class_id');
+    }
 }
