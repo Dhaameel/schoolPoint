@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
+use App\Http\Controllers\Admin\FeeController;
+use App\Http\Controllers\Admin\FeePaymentController;
 use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SchoolClassController;
@@ -72,9 +74,29 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::post('/attendance/take', [AdminAttendanceController::class, 'store'])->name('attendance.store');
         Route::get('/attendance/print', [AdminAttendanceController::class, 'print'])->name('attendance.print');
         Route::get('/attendance/csv', [AdminAttendanceController::class, 'csv'])->name('attendance.csv');
-        Route::get('/fees', [PlaceholderController::class, 'admin'])
-            ->defaults('section', 'fees')
-            ->name('fees.index');
+        Route::get('/fees', [FeeController::class, 'index'])->name('fees.index');
+        Route::get('/fees/structures', [FeeController::class, 'structures'])->name('fees.structures.index');
+        Route::get('/fees/structures/create', [FeeController::class, 'createStructure'])->name('fees.structures.create');
+        Route::post('/fees/structures', [FeeController::class, 'storeStructure'])->name('fees.structures.store');
+        Route::get('/fees/structures/{structure}/edit', [FeeController::class, 'editStructure'])->name('fees.structures.edit');
+        Route::put('/fees/structures/{structure}', [FeeController::class, 'updateStructure'])->name('fees.structures.update');
+        Route::get('/fees/bill', [FeeController::class, 'billForm'])->name('fees.bill');
+        Route::post('/fees/bill', [FeeController::class, 'bill'])->name('fees.bill.store');
+        Route::get('/fees/payments/{payment}/receipt', [FeePaymentController::class, 'receipt'])
+            ->whereNumber('payment')
+            ->name('fees.payments.receipt');
+        Route::get('/fees/{fee}', [FeeController::class, 'show'])->whereNumber('fee')->name('fees.show');
+        Route::post('/fees/{fee}/payments', [FeePaymentController::class, 'store'])
+            ->whereNumber('fee')
+            ->name('fees.payments.store');
+        Route::post('/fees/{fee}/payments/{payment}/reverse', [FeePaymentController::class, 'reverse'])
+            ->whereNumber('fee')
+            ->whereNumber('payment')
+            ->name('fees.payments.reverse');
+        Route::post('/fees/{fee}/void', [FeePaymentController::class, 'void'])
+            ->whereNumber('fee')
+            ->name('fees.void');
+
         Route::get('/reports', [PlaceholderController::class, 'admin'])
             ->defaults('section', 'reports')
             ->name('reports.index');

@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Actions\Students\CreateStudentAction;
 use App\Models\ClassSubject;
+use App\Models\Fee;
+use App\Models\FeeStructure;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Subject;
@@ -63,25 +65,79 @@ class DemoDataSeeder extends Seeder
             }
         }
 
-        if (Student::query()->exists()) {
-            return;
+        if (! Student::query()->exists()) {
+            $firstNames = ['Amina', 'Hodan', 'Mohamed', 'Sahra', 'Ali', 'Fatima', 'Omar', 'Khadija', 'Yusuf', 'Halima'];
+            $lastNames = ['Yusuf', 'Ali', 'Omar', 'Abdi', 'Hassan', 'Ahmed', 'Farah', 'Warsame'];
+            $action = app(CreateStudentAction::class);
+
+            for ($i = 1; $i <= 30; $i++) {
+                $class = $classes[($i - 1) % $classes->count()];
+
+                $action->handle([
+                    'first_name' => $firstNames[($i - 1) % count($firstNames)],
+                    'last_name' => $lastNames[($i - 1) % count($lastNames)],
+                    'gender' => $i % 2 === 0 ? 'Female' : 'Male',
+                    'guardian_name' => 'Guardian '.$i,
+                    'guardian_phone' => '06120000'.str_pad((string) $i, 2, '0', STR_PAD_LEFT),
+                    'class_id' => $class->id,
+                ]);
+            }
         }
 
-        $firstNames = ['Amina', 'Hodan', 'Mohamed', 'Sahra', 'Ali', 'Fatima', 'Omar', 'Khadija', 'Yusuf', 'Halima'];
-        $lastNames = ['Yusuf', 'Ali', 'Omar', 'Abdi', 'Hassan', 'Ahmed', 'Farah', 'Warsame'];
-        $action = app(CreateStudentAction::class);
+        $this->seedFees($classes);
+    }
 
-        for ($i = 1; $i <= 30; $i++) {
-            $class = $classes[($i - 1) % $classes->count()];
+    private function seedFees($classes): void
+    {
+        $dueDate = now()->addDays(30)->toDateString();
 
-            $action->handle([
-                'first_name' => $firstNames[($i - 1) % count($firstNames)],
-                'last_name' => $lastNames[($i - 1) % count($lastNames)],
-                'gender' => $i % 2 === 0 ? 'Female' : 'Male',
-                'guardian_name' => 'Guardian '.$i,
-                'guardian_phone' => '06120000'.str_pad((string) $i, 2, '0', STR_PAD_LEFT),
-                'class_id' => $class->id,
-            ]);
+        foreach ($classes as $index => $class) {
+            $structures = [
+                ['name' => 'Tuition', 'amount' => 120 + ($index * 15), 'bill' => true],
+                ['name' => 'Books', 'amount' => 25, 'bill' => true],
+                ['name' => 'Uniform', 'amount' => 20, 'bill' => false],
+            ];
+
+            foreach ($structures as $definition) {
+                $structure = FeeStructure::firstOrCreate(
+                    [
+                        'class_id' => $class->id,
+                        'name' => $definition['name'],
+                        'currency' => 'USD',
+                    ],
+                    [
+                        'amount' => $definition['amount'],
+                        'is_active' => true,
+                    ]
+                );
+
+                if (! $definition['bill']) {
+                    continue;
+                }
+
+                $students = Student::where('class_id', $class->id)
+                    ->where('status', 'active')
+                    ->get();
+
+                foreach ($students as $student) {
+                    Fee::firstOrCreate(
+                        [
+                            'student_id' => $student->id,
+                            'fee_structure_id' => $structure->id,
+                        ],
+                        [
+                            'class_id' => $class->id,
+                            'title' => $structure->name,
+                            'amount' => $structure->amount,
+                            'amount_paid' => '0.00',
+                            'currency' => $structure->currency,
+                            'status' => 'unpaid',
+                            'due_date' => $dueDate,
+                            'billed_at' => now(),
+                        ]
+                    );
+                }
+            }
         }
     }
 }

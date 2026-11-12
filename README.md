@@ -2,7 +2,7 @@
 
 schoolPoint is a school management system built with Laravel 13.
 
-Current state: **Stage 1 foundation**.
+Current state: **Stages 1–4 complete** (foundation, people, attendance and fees).
 
 The full product plan is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -40,6 +40,7 @@ Other commands:
 ```sh
 php artisan app:reset-password <username>
 php artisan app:disable-two-factor <username>
+php artisan app:fees-reconcile
 ```
 
 ## Tests

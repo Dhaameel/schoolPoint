@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\ClassSubject;
+use App\Models\Fee;
+use App\Models\FeeStructure;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Subject;
@@ -27,6 +29,8 @@ class DemoDataSeederTest extends TestCase
         $this->assertSame(30, Student::count());
         $this->assertSame(15, ClassSubject::count());
         $this->assertSame(30, Student::distinct()->count('student_id'));
+        $this->assertSame(9, FeeStructure::count());
+        $this->assertSame(60, Fee::count());
     }
 
     #[Test]
