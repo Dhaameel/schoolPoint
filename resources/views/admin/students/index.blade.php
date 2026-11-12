@@ -8,7 +8,10 @@
             <h1>{{ __('messages.students') }}</h1>
             <p>{{ __('messages.student_list_help') }}</p>
         </div>
-        <a class="btn btn-primary" href="{{ route('students.create') }}"><i class="bi bi-plus-lg me-1"></i>{{ __('messages.add_student') }}</a>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary" href="{{ route('students.import') }}"><i class="bi bi-upload me-1"></i>{{ __('messages.import_students') }}</a>
+            <a class="btn btn-primary" href="{{ route('students.create') }}"><i class="bi bi-plus-lg me-1"></i>{{ __('messages.add_student') }}</a>
+        </div>
     </div>
 
     <div class="dashboard-card mb-3">

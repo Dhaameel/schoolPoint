@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SchoolClassController;
 use App\Http\Controllers\Admin\StudentController;
+use App\Http\Controllers\Admin\StudentImportController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\TeacherController;
 use App\Http\Controllers\Auth\LoginController;
@@ -39,6 +40,10 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
     Route::post('/password/change', [PasswordChangeController::class, 'update'])->name('password.change.update');
 
     Route::middleware('role:admin')->group(function () {
+        Route::get('/students/import', [StudentImportController::class, 'index'])->name('students.import');
+        Route::get('/students/import/template', [StudentImportController::class, 'template'])->name('students.import.template');
+        Route::post('/students/import/preview', [StudentImportController::class, 'preview'])->name('students.import.preview');
+        Route::post('/students/import/store', [StudentImportController::class, 'import'])->name('students.import.store');
         Route::get('/students/{student}/move-class', [StudentController::class, 'moveClassForm'])->name('students.move-class');
         Route::post('/students/{student}/move-class', [StudentController::class, 'moveClass'])->name('students.move-class.update');
         Route::post('/students/{student}/status', [StudentController::class, 'changeStatus'])->name('students.status');

@@ -31,7 +31,7 @@ class CreateStudentAction
                 'student_id' => $studentId,
                 'student_year' => $year,
                 'student_sequence' => $counter->last_sequence,
-                'status' => 'active',
+                'status' => $data['status'] ?? 'active',
             ]));
 
             Audit::record('students.created', 'Student created.', [
