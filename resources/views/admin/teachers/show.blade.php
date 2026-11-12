@@ -6,7 +6,7 @@
     <div class="dashboard-heading">
         <div>
             <h1>{{ $teacher->user->name }}</h1>
-            <p>{{ __('messages.teacher_profile') }} Â· {{ $teacher->user->username }}</p>
+            <p>{{ __('messages.teacher_profile') }} &middot; {{ $teacher->user->username }}</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-primary" href="{{ route('teachers.edit', $teacher) }}"><i class="bi bi-pencil me-1"></i>{{ __('messages.edit') }}</a>
@@ -28,9 +28,9 @@
                     <dt class="col-5">{{ __('messages.teacher_username') }}</dt>
                     <dd class="col-7 text-end">{{ $teacher->user->username }}</dd>
                     <dt class="col-5">{{ __('messages.phone') }}</dt>
-                    <dd class="col-7 text-end">{{ $teacher->phone ?: 'â€”' }}</dd>
+                    <dd class="col-7 text-end">{{ $teacher->phone ?: '-' }}</dd>
                     <dt class="col-5">{{ __('messages.email') }}</dt>
-                    <dd class="col-7 text-end">{{ $teacher->user->email ?: 'â€”' }}</dd>
+                    <dd class="col-7 text-end">{{ $teacher->user->email ?: '-' }}</dd>
                     <dt class="col-5">{{ __('messages.status') }}</dt>
                     <dd class="col-7 text-end">
                         <span class="badge {{ $teacher->status === 'active' ? 'bg-success' : 'bg-secondary' }}">

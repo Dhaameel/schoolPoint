@@ -6,7 +6,7 @@
     <div class="dashboard-heading">
         <div>
             <h1>{{ __('messages.edit_student') }}</h1>
-            <p>{{ $student->student_id }} Â· {{ $student->name }}</p>
+            <p>{{ $student->student_id }} &middot; {{ $student->name }}</p>
         </div>
         <a class="btn btn-outline-secondary" href="{{ route('students.show', $student) }}">{{ __('messages.back') }}</a>
     </div>
