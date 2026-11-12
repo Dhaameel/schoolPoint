@@ -156,6 +156,7 @@ a {
 .app-main {
     background: $sp-cream;
     min-height: calc(100vh - 64px);
+    min-width: 0;
     padding: 1.5rem 1.75rem;
 }
 
@@ -272,6 +273,104 @@ a {
 .attendance-choice {
     min-height: 44px;
     min-width: 82px;
+}
+
+.attendance-trend-scroll {
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+}
+
+.attendance-trend {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.35rem;
+    min-width: max-content;
+    padding: 1rem 0 0.5rem;
+}
+
+.attendance-trend-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    width: 38px;
+}
+
+.attendance-trend-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+    height: 130px;
+    border-bottom: 1px solid #e9e2cf;
+}
+
+.attendance-trend-bar {
+    display: block;
+    width: 7px;
+    border-radius: 5px 5px 0 0;
+}
+
+.attendance-trend-bar.present,
+.attendance-trend-dot.present {
+    background: #198754;
+}
+
+.attendance-trend-bar.absent,
+.attendance-trend-dot.absent {
+    background: #dc3545;
+}
+
+.attendance-trend-bar.late,
+.attendance-trend-dot.late {
+    background: #f0ad4e;
+}
+
+.attendance-trend-date {
+    color: #6b7280;
+    font-size: 0.7rem;
+}
+
+.attendance-trend-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    color: #6b7280;
+    font-size: 0.78rem;
+}
+
+.attendance-trend-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 4px;
+    border-radius: 50%;
+}
+
+.analytics-stat {
+    position: relative;
+    overflow: hidden;
+}
+
+.analytics-label {
+    color: #6b7280;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.analytics-value {
+    color: #0a3d62;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.analytics-meta {
+    color: #6b7280;
+    font-size: 0.78rem;
 }
 
 /* Split-screen authentication */

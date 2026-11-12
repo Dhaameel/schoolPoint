@@ -7,9 +7,12 @@ use App\Http\Requests\Admin\ReportRangeRequest;
 use App\Models\SchoolClass;
 use App\Models\Setting;
 use App\Models\Student;
+use App\Models\Subject;
 use App\Models\Teacher;
 use App\Queries\Reports\ClassReportQuery;
+use App\Queries\Reports\SchoolReportQuery;
 use App\Queries\Reports\StudentReportQuery;
+use App\Queries\Reports\SubjectReportQuery;
 use App\Queries\Reports\TeacherReportQuery;
 use App\Support\Csv;
 use App\Support\ReportPeriod;
@@ -17,11 +20,58 @@ use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    public function index(Request $request)
+    public function index(ReportRangeRequest $request)
     {
-        $this->ensureAdmin($request);
+        return view('admin.reports.index', $this->schoolContext($request));
+    }
 
-        return view('admin.reports.index');
+    public function schoolPrint(ReportRangeRequest $request)
+    {
+        return view('admin.reports.print.school', $this->schoolContext($request));
+    }
+
+    public function schoolCsv(ReportRangeRequest $request)
+    {
+        $data = $this->schoolContext($request);
+        $period = $data['period'];
+        $report = $data['report'];
+
+        $rows = [$this->csvHeader()];
+        $rows[] = [__('messages.report_range'), __('messages.from'), '', '', $period->startDate()];
+        $rows[] = [__('messages.report_range'), __('messages.to'), '', '', $period->endDate()];
+        $rows[] = [__('messages.report_profile'), __('messages.student_count'), '', '', $report['students_active'].' / '.$report['students_total']];
+        $rows[] = [__('messages.report_profile'), __('messages.classes'), '', '', $report['classes_active'].' / '.$report['classes_total']];
+        $rows[] = [__('messages.report_profile'), __('messages.teachers'), '', '', $report['teachers_active'].' / '.$report['teachers_total']];
+        $rows[] = [__('messages.report_profile'), __('messages.subjects'), '', '', $report['subjects_total']];
+
+        foreach ([
+            'present' => __('messages.present'),
+            'absent' => __('messages.absent'),
+            'late' => __('messages.late'),
+            'school_days' => __('messages.school_days'),
+        ] as $key => $label) {
+            $value = $key === 'school_days' ? $report['school_days'] : $report['attendance'][$key];
+            $rows[] = [__('messages.report_attendance'), $label, '', '', $value];
+        }
+
+        $rows[] = [__('messages.report_attendance'), __('messages.percentage_present'), '', '', number_format($report['attendance']['percentage'], 1).'%'];
+
+        foreach ($this->currencies($report['fees_billed'], $report['fees_collected'], $report['outstanding']) as $currency) {
+            $rows[] = [__('messages.report_fees'), __('messages.report_fees_billed'), '', $currency, $report['fees_billed'][$currency] ?? '0.00'];
+            $rows[] = [__('messages.report_fees'), __('messages.report_collected'), '', $currency, $report['fees_collected'][$currency] ?? '0.00'];
+            $rows[] = [__('messages.report_fees'), __('messages.report_outstanding'), '', $currency, $report['outstanding'][$currency] ?? '0.00'];
+        }
+
+        foreach (['unpaid', 'partial', 'paid', 'void'] as $status) {
+            $rows[] = [__('messages.report_fees'), __('messages.'.$this->feeStatusLabel($status)), '', '', (int) ($report['fee_status_counts'][$status] ?? 0)];
+        }
+
+        foreach ($report['class_rows'] as $row) {
+            $rows[] = [__('messages.classes'), __('messages.percentage_present'), $row['class']->name, '', $row['percentage'].'%'];
+            $rows[] = [__('messages.classes'), __('messages.student_count'), $row['class']->name, '', $row['students']];
+        }
+
+        return $this->csvDownload('school-report-'.$period->startDate().'-'.$period->endDate().'.csv', $rows);
     }
 
     public function students(ReportRangeRequest $request)
@@ -205,6 +255,48 @@ class ReportController extends Controller
         return $this->csvDownload('class-report-'.($class?->id ?? 'none').'-'.$period->startDate().'-'.$period->endDate().'.csv', $rows);
     }
 
+    public function subjects(ReportRangeRequest $request)
+    {
+        $data = $this->subjectContext($request);
+        $subjects = Subject::orderBy('name')->get(['id', 'name', 'code']);
+
+        return view('admin.reports.subjects', array_merge($data, compact('subjects')));
+    }
+
+    public function subjectPrint(ReportRangeRequest $request)
+    {
+        return view('admin.reports.print.subject', $this->subjectContext($request));
+    }
+
+    public function subjectCsv(ReportRangeRequest $request)
+    {
+        $data = $this->subjectContext($request);
+        $subject = $data['subject'];
+        $period = $data['period'];
+        $report = $data['report'];
+
+        $rows = [$this->csvHeader()];
+        $rows[] = [__('messages.report_profile'), __('messages.subject_name'), '', '', $subject?->name ?? __('messages.report_no_subject')];
+        $rows[] = [__('messages.report_profile'), __('messages.subject_code'), '', '', $subject?->code ?? ''];
+        $rows[] = [__('messages.report_range'), __('messages.from'), '', '', $period->startDate()];
+        $rows[] = [__('messages.report_range'), __('messages.to'), '', '', $period->endDate()];
+
+        if ($report) {
+            $rows[] = [__('messages.report_profile'), __('messages.classes'), '', '', $report['classes']->count()];
+            $rows[] = [__('messages.report_profile'), __('messages.teachers'), '', '', $report['teachers']->count()];
+            $rows[] = [__('messages.report_profile'), __('messages.student_count'), '', '', $report['students']];
+
+            foreach ($report['classes'] as $row) {
+                $rows[] = [__('messages.classes'), __('messages.class'), $row['class']->name, '', $row['attendance']['percentage'].'%'];
+                $rows[] = [__('messages.classes'), __('messages.class_teacher'), $row['class']->name, '', $row['class']->classTeacher?->user?->name ?? '-'];
+                $rows[] = [__('messages.classes'), __('messages.subject_teacher'), $row['class']->name, '', $row['subject_teacher']?->user?->name ?? '-'];
+                $rows[] = [__('messages.classes'), __('messages.student_count'), $row['class']->name, '', $row['class']->students_count];
+            }
+        }
+
+        return $this->csvDownload('subject-report-'.($subject?->id ?? 'none').'-'.$period->startDate().'-'.$period->endDate().'.csv', $rows);
+    }
+
     private function studentContext(ReportRangeRequest $request): array
     {
         $this->ensureAdmin($request);
@@ -253,6 +345,41 @@ class ReportController extends Controller
             : null;
 
         return compact('period', 'class', 'report');
+    }
+
+    private function schoolContext(ReportRangeRequest $request): array
+    {
+        $this->ensureAdmin($request);
+
+        $period = $this->period($request);
+        $report = (new SchoolReportQuery)->forPeriod($period, Setting::schoolDays());
+
+        return compact('period', 'report');
+    }
+
+    private function subjectContext(ReportRangeRequest $request): array
+    {
+        $this->ensureAdmin($request);
+
+        $period = $this->period($request);
+        $subject = $request->filled('subject_id')
+            ? Subject::findOrFail($request->integer('subject_id'))
+            : Subject::orderBy('name')->first();
+        $report = $subject
+            ? (new SubjectReportQuery)->forSubject($subject, $period, Setting::schoolDays())
+            : null;
+
+        return compact('period', 'subject', 'report');
+    }
+
+    private function feeStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'unpaid' => 'fee_unpaid',
+            'partial' => 'fee_partial',
+            'paid' => 'fee_paid_status',
+            default => 'fee_void',
+        };
     }
 
     private function period(ReportRangeRequest $request): ReportPeriod

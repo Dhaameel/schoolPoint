@@ -98,6 +98,11 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
             ->name('fees.void');
 
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/school/print', [ReportController::class, 'schoolPrint'])->name('reports.school.print');
+        Route::get('/reports/school/csv', [ReportController::class, 'schoolCsv'])->name('reports.school.csv');
+        Route::get('/reports/subjects', [ReportController::class, 'subjects'])->name('reports.subjects');
+        Route::get('/reports/subjects/print', [ReportController::class, 'subjectPrint'])->name('reports.subjects.print');
+        Route::get('/reports/subjects/csv', [ReportController::class, 'subjectCsv'])->name('reports.subjects.csv');
         Route::get('/reports/students', [ReportController::class, 'students'])->name('reports.students');
         Route::get('/reports/students/print', [ReportController::class, 'studentPrint'])->name('reports.students.print');
         Route::get('/reports/students/csv', [ReportController::class, 'studentCsv'])->name('reports.students.csv');

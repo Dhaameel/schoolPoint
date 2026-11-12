@@ -11,6 +11,7 @@ use App\Models\FeeStructure;
 use App\Models\SchoolClass;
 use App\Models\Setting;
 use App\Models\Student;
+use App\Queries\Reports\FeeAnalyticsQuery;
 use App\Support\Audit;
 use App\Support\FeeBalance;
 use Carbon\Carbon;
@@ -53,8 +54,9 @@ class FeeController extends Controller
             ->withQueryString();
 
         $classes = SchoolClass::orderBy('name')->get();
+        $analytics = (new FeeAnalyticsQuery)->snapshot();
 
-        return view('admin.fees.index', compact('fees', 'classes', 'search', 'classId', 'status'));
+        return view('admin.fees.index', compact('fees', 'classes', 'search', 'classId', 'status', 'analytics'));
     }
 
     public function show(Fee $fee)

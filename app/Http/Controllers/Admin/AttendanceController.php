@@ -10,7 +10,6 @@ use App\Models\Setting;
 use App\Models\Student;
 use App\Queries\Attendance\ClassAttendanceSummary;
 use App\Support\Csv;
-use App\Support\SchoolDays;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
@@ -134,9 +133,29 @@ class AttendanceController extends Controller
                 ->groupBy('student_id')
                 ->map(fn ($rows) => $rows->keyBy(fn ($row) => $row->date->toDateString()))
             : collect();
-        $summary = $class ? (new ClassAttendanceSummary())->forClass($class->id, $monthStart, $monthEnd, $schoolDays) : null;
+        $summary = $class ? (new ClassAttendanceSummary)->forClass($class->id, $monthStart, $monthEnd, $schoolDays) : null;
 
-        return compact('classes', 'class', 'month', 'monthStart', 'days', 'students', 'attendance', 'schoolDays', 'summary');
+        $dailyCounts = [];
+        $maxDaily = 1;
+
+        foreach ($days as $day) {
+            $date = $day->toDateString();
+            $counts = ['present' => 0, 'absent' => 0, 'late' => 0, 'total' => 0];
+
+            foreach ($students as $student) {
+                $record = $attendance->get($student->id)?->get($date);
+
+                if ($record) {
+                    $counts[$record->status]++;
+                    $counts['total']++;
+                }
+            }
+
+            $dailyCounts[$date] = $counts;
+            $maxDaily = max($maxDaily, $counts['total']);
+        }
+
+        return compact('classes', 'class', 'month', 'monthStart', 'days', 'students', 'attendance', 'schoolDays', 'summary', 'dailyCounts', 'maxDaily');
     }
 
     private function takeData(SchoolClass $class, string $date, $classes): array

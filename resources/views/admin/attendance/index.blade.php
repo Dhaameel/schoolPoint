@@ -46,6 +46,42 @@
         </div>
     @endif
 
+    @if($class && $students->isNotEmpty())
+        <div class="dashboard-card mb-3">
+            <div class="dashboard-card-head">
+                <h2>{{ __('messages.attendance_trend') }}</h2>
+                <span class="small text-muted">{{ __('messages.attendance_trend_help') }}</span>
+            </div>
+
+            <div class="attendance-trend-scroll">
+                <div class="attendance-trend">
+                    @foreach($days as $day)
+                        @if(\App\Support\SchoolDays::isSchoolDay($day, $schoolDays))
+                            @php($counts = $dailyCounts[$day->toDateString()])
+                            <div class="attendance-trend-day">
+                                <div class="attendance-trend-bars">
+                                    <span class="attendance-trend-bar present" style="height: {{ round(($counts['present'] / $maxDaily) * 100) }}%"
+                                          title="{{ __('messages.present') }}: {{ $counts['present'] }}"></span>
+                                    <span class="attendance-trend-bar absent" style="height: {{ round(($counts['absent'] / $maxDaily) * 100) }}%"
+                                          title="{{ __('messages.absent') }}: {{ $counts['absent'] }}"></span>
+                                    <span class="attendance-trend-bar late" style="height: {{ round(($counts['late'] / $maxDaily) * 100) }}%"
+                                          title="{{ __('messages.late') }}: {{ $counts['late'] }}"></span>
+                                </div>
+                                <span class="attendance-trend-date">{{ $day->format('d') }}</span>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="attendance-trend-legend">
+                <span><i class="attendance-trend-dot present"></i>{{ __('messages.present') }}</span>
+                <span><i class="attendance-trend-dot absent"></i>{{ __('messages.absent') }}</span>
+                <span><i class="attendance-trend-dot late"></i>{{ __('messages.late') }}</span>
+            </div>
+        </div>
+    @endif
+
     <div class="dashboard-card">
         @if(!$class || $students->isEmpty())
             <div class="empty-state">

@@ -46,6 +46,8 @@
         </form>
     </div>
 
+    @include('admin.fees.partials.analytics', ['analytics' => $analytics])
+
     <div class="dashboard-card">
         @if($fees->count() === 0)
             <div class="empty-state">
