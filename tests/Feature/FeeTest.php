@@ -429,6 +429,57 @@ class FeeTest extends TestCase
     }
 
     #[Test]
+    public function the_fees_page_shows_real_analytics_for_billed_collected_and_outstanding_money(): void
+    {
+        $class = $this->class();
+        $student = $this->student($class);
+
+        Fee::create([
+            'student_id' => $student->id,
+            'class_id' => $class->id,
+            'title' => 'Tuition',
+            'amount' => '100.00',
+            'amount_paid' => '40.00',
+            'currency' => 'USD',
+            'status' => 'partial',
+            'billed_at' => now(),
+        ]);
+        Fee::create([
+            'student_id' => $student->id,
+            'class_id' => $class->id,
+            'title' => 'Books',
+            'amount' => '50.00',
+            'amount_paid' => '50.00',
+            'currency' => 'USD',
+            'status' => 'paid',
+            'billed_at' => now(),
+        ]);
+        Fee::create([
+            'student_id' => $student->id,
+            'class_id' => $class->id,
+            'title' => 'Old fee',
+            'amount' => '20.00',
+            'amount_paid' => '0.00',
+            'currency' => 'USD',
+            'status' => 'void',
+            'billed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->admin())->get('/fees');
+
+        $response->assertSuccessful()->assertSee('Fee snapshot');
+        $response->assertViewHas('analytics', function (array $analytics) {
+            return $analytics['billed'] === ['USD' => '150.00']
+                && $analytics['collected'] === ['USD' => '90.00']
+                && $analytics['outstanding'] === ['USD' => '60.00']
+                && $analytics['rates'] === ['USD' => 60.0]
+                && (int) $analytics['status_counts']['partial'] === 1
+                && (int) $analytics['status_counts']['paid'] === 1
+                && (int) $analytics['status_counts']['void'] === 1;
+        });
+    }
+
+    #[Test]
     public function the_billing_preview_counts_only_active_students_in_the_class(): void
     {
         $admin = $this->admin();

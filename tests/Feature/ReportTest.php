@@ -117,7 +117,7 @@ class ReportTest extends TestCase
     {
         $this->teacher();
 
-        foreach (['/reports', '/reports/students', '/reports/teachers', '/reports/classes'] as $uri) {
+        foreach (['/reports', '/reports/students', '/reports/teachers', '/reports/classes', '/reports/subjects'] as $uri) {
             $this->actingAs($this->admin)->get($uri)->assertSuccessful();
         }
     }
@@ -127,7 +127,17 @@ class ReportTest extends TestCase
     {
         $teacher = $this->teacher();
 
-        foreach (['/reports', '/reports/students', '/reports/teachers', '/reports/classes', '/reports/students/csv', '/reports/classes/print'] as $uri) {
+        foreach ([
+            '/reports',
+            '/reports/students',
+            '/reports/teachers',
+            '/reports/classes',
+            '/reports/subjects',
+            '/reports/students/csv',
+            '/reports/classes/print',
+            '/reports/school/csv',
+            '/reports/subjects/print',
+        ] as $uri) {
             $this->actingAs($teacher->user)->get($uri)->assertForbidden();
         }
     }
@@ -204,6 +214,96 @@ class ReportTest extends TestCase
         $this->assertStringContainsString('40.00', $csv);
         $this->assertStringContainsString('60.00', $csv);
         $this->assertStringContainsString('Present', $csv);
+    }
+
+    #[Test]
+    public function the_school_report_aggregates_attendance_and_fees_from_real_records(): void
+    {
+        $firstClass = $this->class();
+        $secondClass = $this->class('Class 2');
+        $first = $this->student($firstClass, 'Amina');
+        $second = $this->student($firstClass, 'Hodan');
+        $third = $this->student($secondClass, 'Ali');
+
+        $this->attendance($first, '2026-11-09', 'present');
+        $this->attendance($second, '2026-11-09', 'absent');
+        $this->attendance($third, '2026-11-09', 'present');
+
+        $usdFee = $this->fee($first, '100.00', 'USD', '2026-11-05', '40.00', 'partial');
+        $this->fee($third, '50.00', 'EUR', '2026-11-05');
+        $this->payment($usdFee, '40.00', '2026-11-06');
+
+        $response = $this->actingAs($this->admin)
+            ->get('/reports?range=custom&start_date=2026-11-01&end_date=2026-11-30');
+
+        $response->assertSuccessful();
+        $response->assertViewHas('report', function (array $report) {
+            return $report['students_active'] === 3
+                && $report['classes_total'] === 2
+                && $report['attendance']['present'] === 2
+                && $report['attendance']['absent'] === 1
+                && $report['fees_billed'] === ['USD' => '100.00', 'EUR' => '50.00']
+                && $report['fees_collected'] === ['USD' => '40.00']
+                && $report['outstanding'] === ['USD' => '60.00', 'EUR' => '50.00']
+                && $report['class_rows']->count() === 2;
+        });
+
+        $this->actingAs($this->admin)
+            ->get('/reports/school/print?range=custom&start_date=2026-11-01&end_date=2026-11-30')
+            ->assertSuccessful()
+            ->assertSee('USD')
+            ->assertSee('60.00');
+
+        $csv = $this->actingAs($this->admin)
+            ->get('/reports/school/csv?range=custom&start_date=2026-11-01&end_date=2026-11-30')
+            ->streamedContent();
+
+        $this->assertStringContainsString('Collected in range', $csv);
+        $this->assertStringContainsString('60.00', $csv);
+    }
+
+    #[Test]
+    public function the_subject_report_shows_classes_teachers_and_class_attendance(): void
+    {
+        $subject = Subject::create(['name' => 'Mathematics', 'code' => 'MATH']);
+        $teacher = $this->teacher();
+        $firstClass = $this->class();
+        $secondClass = $this->class('Class 2');
+        $first = $this->student($firstClass, 'Amina');
+        $second = $this->student($firstClass, 'Hodan');
+        $third = $this->student($secondClass, 'Ali');
+
+        $firstClass->update(['class_teacher_id' => $teacher->id]);
+        ClassSubject::create(['class_id' => $firstClass->id, 'subject_id' => $subject->id, 'teacher_id' => $teacher->id]);
+        ClassSubject::create(['class_id' => $secondClass->id, 'subject_id' => $subject->id, 'teacher_id' => $teacher->id]);
+
+        $this->attendance($first, '2026-11-09', 'present');
+        $this->attendance($second, '2026-11-10', 'absent');
+        $this->attendance($third, '2026-11-09', 'present');
+
+        $response = $this->actingAs($this->admin)
+            ->get('/reports/subjects?subject_id='.$subject->id.'&range=custom&start_date=2026-11-01&end_date=2026-11-30');
+
+        $response->assertSuccessful();
+        $response->assertViewHas('report', function (array $report) {
+            return $report['classes']->count() === 2
+                && $report['teachers']->count() === 1
+                && $report['students'] === 3
+                && $report['unassigned_classes'] === 0;
+        });
+
+        $this->actingAs($this->admin)
+            ->get('/reports/subjects/print?subject_id='.$subject->id.'&range=custom&start_date=2026-11-01&end_date=2026-11-30')
+            ->assertSuccessful()
+            ->assertSee('Mathematics')
+            ->assertSee('MATH');
+
+        $csv = $this->actingAs($this->admin)
+            ->get('/reports/subjects/csv?subject_id='.$subject->id.'&range=custom&start_date=2026-11-01&end_date=2026-11-30')
+            ->streamedContent();
+
+        $this->assertStringContainsString('Mathematics', $csv);
+        $this->assertStringContainsString('Subject teacher', $csv);
     }
 
     #[Test]

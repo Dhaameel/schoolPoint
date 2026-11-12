@@ -42,12 +42,27 @@ async function capture(size, label) {
         await page.goto(`${baseUrl}/reports/classes`, { waitUntil: 'networkidle0' });
         await shot(page, `class-report-${label}`);
 
+        await page.goto(`${baseUrl}/reports/subjects`, { waitUntil: 'networkidle0' });
+        await shot(page, `subject-report-${label}`);
+
+        await page.goto(`${baseUrl}/attendance?month=2026-11`, { waitUntil: 'networkidle0' });
+        await shot(page, `attendance-analytics-${label}`);
+
+        await page.goto(`${baseUrl}/fees`, { waitUntil: 'networkidle0' });
+        await shot(page, `fees-analytics-${label}`, label === 'desktop');
+
         if (label === 'desktop') {
+            await page.goto(`${baseUrl}/reports/school/print`, { waitUntil: 'networkidle0' });
+            await shot(page, 'school-report-print-desktop');
+
             await page.goto(`${baseUrl}/reports/students/print`, { waitUntil: 'networkidle0' });
             await shot(page, 'student-report-print-desktop');
 
             await page.goto(`${baseUrl}/reports/classes/print`, { waitUntil: 'networkidle0' });
             await shot(page, 'class-report-print-desktop');
+
+            await page.goto(`${baseUrl}/reports/subjects/print`, { waitUntil: 'networkidle0' });
+            await shot(page, 'subject-report-print-desktop');
         }
     } finally {
         await browser.close();

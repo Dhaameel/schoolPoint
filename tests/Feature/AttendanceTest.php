@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\AuditLog;
 use App\Models\SchoolClass;
 use App\Models\Setting;
 use App\Models\Student;
@@ -117,7 +118,7 @@ class AttendanceTest extends TestCase
             'action' => 'attendance.updated',
         ]);
 
-        $log = \App\Models\AuditLog::where('action', 'attendance.updated')->latest('id')->firstOrFail();
+        $log = AuditLog::where('action', 'attendance.updated')->latest('id')->firstOrFail();
         $this->assertSame('present', $log->metadata['old_status']);
         $this->assertSame('late', $log->metadata['new_status']);
     }
@@ -152,6 +153,10 @@ class AttendanceTest extends TestCase
     #[Test]
     public function a_teacher_can_mark_only_their_assigned_class_today(): void
     {
+        config(['app.timezone' => 'Africa/Mogadishu']);
+        date_default_timezone_set('Africa/Mogadishu');
+        Carbon::setTestNow(Carbon::parse('2026-11-12 10:00:00', 'Africa/Mogadishu'));
+
         $teacher = $this->teacher();
         $class = $this->class('Class 1', $teacher);
         $other = $this->class('Class 2');
@@ -170,7 +175,7 @@ class AttendanceTest extends TestCase
             'statuses' => [$student->id => 'present'],
         ])->assertForbidden();
 
-        $policy = new AttendancePolicy();
+        $policy = new AttendancePolicy;
         $this->assertTrue($policy->editDate($teacher->user, $class, $date));
         $this->assertFalse($policy->editDate($teacher->user, $class, now()->subDay()->toDateString()));
         $this->assertFalse($policy->markClass($teacher->user, $other));
@@ -214,7 +219,7 @@ class AttendanceTest extends TestCase
     {
         $teacher = $this->teacher();
         $class = $this->class('Class 1', $teacher);
-        $policy = new AttendancePolicy();
+        $policy = new AttendancePolicy;
 
         Setting::put('timezone', 'Africa/Mogadishu');
         $timezone = Setting::get('timezone');
@@ -242,7 +247,7 @@ class AttendanceTest extends TestCase
         Attendance::create(['student_id' => $student->id, 'class_id' => $class->id, 'date' => '2026-11-10', 'status' => 'absent', 'marked_by' => $this->admin()->id]);
         Attendance::create(['student_id' => $student->id, 'class_id' => $class->id, 'date' => '2026-11-14', 'status' => 'present', 'marked_by' => $this->admin()->id]);
 
-        $summary = (new StudentAttendanceSummary())->forStudent(
+        $summary = (new StudentAttendanceSummary)->forStudent(
             $student,
             Carbon::parse('2026-11-09'),
             Carbon::parse('2026-11-15'),
@@ -254,7 +259,7 @@ class AttendanceTest extends TestCase
         $this->assertSame(5, $summary['school_days']);
         $this->assertSame(20.0, $summary['percentage']);
 
-        $classSummary = (new ClassAttendanceSummary())->forClass($class->id, Carbon::parse('2026-11-09'), Carbon::parse('2026-11-15'), [1, 2, 3, 4, 5]);
+        $classSummary = (new ClassAttendanceSummary)->forClass($class->id, Carbon::parse('2026-11-09'), Carbon::parse('2026-11-15'), [1, 2, 3, 4, 5]);
         $this->assertSame(5, $classSummary['school_days']);
         $this->assertSame(20.0, $classSummary['percentage']);
     }
@@ -267,11 +272,14 @@ class AttendanceTest extends TestCase
         $student = $this->student($class);
         Attendance::create(['student_id' => $student->id, 'class_id' => $class->id, 'date' => '2026-11-09', 'status' => 'present', 'marked_by' => $admin->id]);
 
-        $this->actingAs($admin)->get('/attendance?class_id='.$class->id.'&month=2026-11')
+        $grid = $this->actingAs($admin)->get('/attendance?class_id='.$class->id.'&month=2026-11')
             ->assertSuccessful()
             ->assertSee('Amina')
             ->assertSee('bi-check-lg')
-            ->assertSee('non-school');
+            ->assertSee('non-school')
+            ->assertSee('Attendance trend');
+
+        $grid->assertViewHas('dailyCounts', fn (array $counts) => $counts['2026-11-09']['present'] === 1);
 
         $this->actingAs($admin)->get('/attendance/print?class_id='.$class->id.'&month=2026-11')
             ->assertSuccessful()
