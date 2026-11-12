@@ -272,6 +272,10 @@ class AttendanceTest extends TestCase
             ->assertSee('Amina')
             ->assertSee('bi-check-lg')
             ->assertSee('non-school');
+
+        $this->actingAs($admin)->get('/attendance/print?class_id='.$class->id.'&month=2026-11')
+            ->assertSuccessful()
+            ->assertSee('Amina');
     }
 
     #[Test]

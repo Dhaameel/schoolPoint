@@ -37,6 +37,11 @@ async function capture(size, label) {
 
         await page.goto(`${baseUrl}/settings`, { waitUntil: 'networkidle0' });
         await shot(page, `school-days-${label}`);
+
+        if (label === 'desktop') {
+            await page.goto(`${baseUrl}/attendance/print?month=2026-11`, { waitUntil: 'networkidle0' });
+            await shot(page, 'print-grid-desktop');
+        }
     } finally {
         await adminBrowser.close();
     }
