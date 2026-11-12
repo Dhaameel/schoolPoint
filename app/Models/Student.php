@@ -31,6 +31,11 @@ class Student extends Model
         return $this->belongsTo(SchoolClass::class, 'class_id');
     }
 
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
     public function getNameAttribute(): string
     {
         return trim($this->first_name.' '.$this->last_name);
