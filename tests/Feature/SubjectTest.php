@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\ClassSubject;
+use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\User;
 use Database\Seeders\SettingSeeder;
@@ -58,7 +60,7 @@ class SubjectTest extends TestCase
             ->assertSee('Mathematics')
             ->assertDontSee('English');
 
-        $this->actingAs($admin)->get('/subjects?code=with')
+        $this->actingAs($admin)->get('/subjects?assignment=unassigned')
             ->assertSuccessful()
             ->assertSee('Mathematics')
             ->assertSee('English');
@@ -73,6 +75,19 @@ class SubjectTest extends TestCase
             ->assertRedirect(route('subjects.index'));
 
         $this->assertDatabaseMissing('subjects', ['id' => $subject->id]);
+    }
+
+    #[Test]
+    public function a_subject_cannot_be_deleted_when_assigned_to_a_class(): void
+    {
+        $subject = Subject::create(['name' => 'Science', 'code' => 'SCI']);
+        $class = SchoolClass::create(['name' => 'Class 1', 'status' => 'active']);
+        ClassSubject::create(['class_id' => $class->id, 'subject_id' => $subject->id]);
+
+        $this->actingAs($this->admin())->delete("/subjects/{$subject->id}")
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('subjects', ['id' => $subject->id]);
     }
 
     #[Test]

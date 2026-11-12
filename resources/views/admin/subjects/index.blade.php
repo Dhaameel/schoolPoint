@@ -18,11 +18,11 @@
                 <input class="form-control" id="search" name="search" value="{{ $search }}" placeholder="{{ __('messages.search_subjects') }}">
             </div>
             <div class="col-md-3">
-                <label class="form-label" for="code">{{ __('messages.filter') }}</label>
-                <select class="form-select" id="code" name="code">
-                    <option value="all" @selected($codeFilter === 'all')>{{ __('messages.all') }}</option>
-                    <option value="with" @selected($codeFilter === 'with')>{{ __('messages.with_code') }}</option>
-                    <option value="without" @selected($codeFilter === 'without')>{{ __('messages.without_code') }}</option>
+                <label class="form-label" for="assignment">{{ __('messages.filter') }}</label>
+                <select class="form-select" id="assignment" name="assignment">
+                    <option value="all" @selected($assignment === 'all')>{{ __('messages.all') }}</option>
+                    <option value="assigned" @selected($assignment === 'assigned')>{{ __('messages.assigned') }}</option>
+                    <option value="unassigned" @selected($assignment === 'unassigned')>{{ __('messages.unassigned') }}</option>
                 </select>
             </div>
             <div class="col-md-3 d-flex gap-2">
@@ -47,6 +47,7 @@
                     <tr>
                         <th>{{ __('messages.subject_name') }}</th>
                         <th>{{ __('messages.subject_code') }}</th>
+                        <th>{{ __('messages.assigned_to_classes') }}</th>
                         <th class="text-end">{{ __('messages.actions') }}</th>
                     </tr>
                     </thead>
@@ -55,6 +56,7 @@
                         <tr>
                             <td data-label="{{ __('messages.subject_name') }}">{{ $subject->name }}</td>
                             <td data-label="{{ __('messages.subject_code') }}">{{ $subject->code ?: '—' }}</td>
+                            <td data-label="{{ __('messages.assigned_to_classes') }}">{{ $subject->class_subjects_count }}</td>
                             <td data-label="{{ __('messages.actions') }}" class="text-end">
                                 <a class="btn btn-sm btn-outline-primary" href="{{ route('subjects.edit', $subject) }}"><i class="bi bi-pencil"></i> {{ __('messages.edit') }}</a>
                                 <form class="d-inline" method="POST" action="{{ route('subjects.destroy', $subject) }}" onsubmit="return confirm('{{ __('messages.confirm_delete') }}')">

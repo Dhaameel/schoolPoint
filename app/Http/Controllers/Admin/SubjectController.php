@@ -15,22 +15,23 @@ class SubjectController extends Controller
         $this->authorize('viewAny', Subject::class);
 
         $search = trim((string) $request->query('search', ''));
-        $codeFilter = $request->query('code', 'all');
+        $assignment = $request->query('assignment', 'all');
 
         $subjects = Subject::query()
+            ->withCount('classSubjects')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
                         ->orWhere('code', 'like', "%{$search}%");
                 });
             })
-            ->when($codeFilter === 'with', fn ($query) => $query->whereNotNull('code'))
-            ->when($codeFilter === 'without', fn ($query) => $query->whereNull('code'))
+            ->when($assignment === 'assigned', fn ($query) => $query->has('classSubjects'))
+            ->when($assignment === 'unassigned', fn ($query) => $query->doesntHave('classSubjects'))
             ->orderBy('name')
             ->paginate(25)
             ->withQueryString();
 
-        return view('admin.subjects.index', compact('subjects', 'search', 'codeFilter'));
+        return view('admin.subjects.index', compact('subjects', 'search', 'assignment'));
     }
 
     public function create()
@@ -72,6 +73,10 @@ class SubjectController extends Controller
     public function destroy(Subject $subject)
     {
         $this->authorize('delete', $subject);
+
+        if ($subject->classSubjects()->exists()) {
+            return back()->with('error', __('messages.subject_delete_blocked'));
+        }
 
         Audit::record('subjects.deleted', 'Subject deleted.', ['subject_id' => $subject->id, 'name' => $subject->name]);
         $subject->delete();

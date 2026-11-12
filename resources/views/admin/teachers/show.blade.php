@@ -61,10 +61,41 @@
         <div class="col-lg-8">
             <div class="dashboard-card h-100">
                 <div class="dashboard-card-head"><h2>{{ __('messages.classes_and_subjects') }}</h2></div>
-                <div class="empty-state">
-                    <div class="empty-state-icon"><i class="bi bi-easel"></i></div>
-                    <p class="text-muted mb-0">{{ __('messages.no_assignments_yet') }}</p>
-                </div>
+
+                @if($teacher->classTeacherClasses->isEmpty() && $teacher->classSubjects->isEmpty())
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i class="bi bi-easel"></i></div>
+                        <p class="text-muted mb-0">{{ __('messages.no_assignments_yet') }}</p>
+                    </div>
+                @else
+                    @if($teacher->classTeacherClasses->isNotEmpty())
+                        <h3 class="h6">{{ __('messages.class_teacher_of') }}</h3>
+                        <ul class="list-group mb-3">
+                            @foreach($teacher->classTeacherClasses as $class)
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <a href="{{ route('classes.show', $class) }}">{{ $class->name }}</a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    @if($teacher->classSubjects->isNotEmpty())
+                        <h3 class="h6">{{ __('messages.subject_teacher_of') }}</h3>
+                        <div class="table-responsive">
+                            <table class="table table-sm data-table">
+                                <thead><tr><th>{{ __('messages.class_name') }}</th><th>{{ __('messages.subject') }}</th></tr></thead>
+                                <tbody>
+                                @foreach($teacher->classSubjects as $assignment)
+                                    <tr>
+                                        <td data-label="{{ __('messages.class_name') }}">{{ $assignment->schoolClass?->name }}</td>
+                                        <td data-label="{{ __('messages.subject') }}">{{ $assignment->subject?->name }}</td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                @endif
             </div>
         </div>
     </div>

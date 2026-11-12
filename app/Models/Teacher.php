@@ -18,4 +18,14 @@ class Teacher extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function classSubjects()
+    {
+        return $this->hasMany(ClassSubject::class);
+    }
+
+    public function classTeacherClasses()
+    {
+        return $this->hasMany(SchoolClass::class, 'class_teacher_id');
+    }
 }

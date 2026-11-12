@@ -461,6 +461,24 @@ a {
     }
 }
 
+@media print {
+    body {
+        background: #fff;
+    }
+
+    .btn,
+    .app-footer,
+    .app-topbar,
+    .app-sidebar {
+        display: none !important;
+    }
+
+    .dashboard-card {
+        box-shadow: none;
+        border: 0;
+    }
+}
+
 @media (max-width: 767.98px) {
     .app-sidebar {
         min-height: 0;

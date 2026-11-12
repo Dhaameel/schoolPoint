@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\SchoolClassController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\TeacherController;
 use App\Http\Controllers\Auth\LoginController;
@@ -44,9 +45,13 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::post('/teachers/{teacher}/deactivate', [TeacherController::class, 'deactivate'])->name('teachers.deactivate');
         Route::post('/teachers/{teacher}/reactivate', [TeacherController::class, 'reactivate'])->name('teachers.reactivate');
         Route::resource('/teachers', TeacherController::class);
-        Route::get('/classes', [PlaceholderController::class, 'admin'])
-            ->defaults('section', 'classes')
-            ->name('classes.index');
+        Route::post('/classes/{class}/archive', [SchoolClassController::class, 'archive'])->name('classes.archive');
+        Route::put('/classes/{class}/class-teacher', [SchoolClassController::class, 'updateClassTeacher'])->name('classes.class-teacher.update');
+        Route::post('/classes/{class}/subjects', [SchoolClassController::class, 'storeSubject'])->name('classes.subjects.store');
+        Route::put('/classes/{class}/subjects/{classSubject}', [SchoolClassController::class, 'updateSubject'])->name('classes.subjects.update');
+        Route::post('/classes/{class}/move-preview', [SchoolClassController::class, 'bulkMovePreview'])->name('classes.move.preview');
+        Route::post('/classes/{class}/move', [SchoolClassController::class, 'bulkMove'])->name('classes.move');
+        Route::resource('/classes', SchoolClassController::class)->except('destroy');
         Route::resource('/subjects', SubjectController::class)->except('show');
         Route::get('/attendance', [PlaceholderController::class, 'admin'])
             ->defaults('section', 'attendance')

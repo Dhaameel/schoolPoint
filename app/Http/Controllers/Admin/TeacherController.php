@@ -81,7 +81,7 @@ class TeacherController extends Controller
     {
         $this->authorize('view', $teacher);
 
-        $teacher->load('user');
+        $teacher->load(['user', 'classSubjects.subject', 'classSubjects.schoolClass', 'classTeacherClasses']);
 
         return view('admin.teachers.show', compact('teacher'));
     }
@@ -142,12 +142,20 @@ class TeacherController extends Controller
     {
         $this->authorize('update', $teacher);
 
+        $hasAssignments = $teacher->classSubjects()->exists() || $teacher->classTeacherClasses()->exists();
+
         $teacher->update(['status' => 'inactive']);
         $teacher->user->update(['is_active' => false]);
 
         Audit::record('teachers.deactivated', 'Teacher deactivated.', ['teacher_id' => $teacher->id]);
 
-        return back()->with('status', __('messages.teacher_deactivated'));
+        $redirect = back()->with('status', __('messages.teacher_deactivated'));
+
+        if ($hasAssignments) {
+            $redirect->with('warning', __('messages.deactivate_warning_assignments'));
+        }
+
+        return $redirect;
     }
 
     public function reactivate(Teacher $teacher)

@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
+use App\Models\ClassSubject;
+use App\Models\SchoolClass;
+use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
 use Database\Seeders\SettingSeeder;
@@ -131,6 +134,32 @@ class TeacherTest extends TestCase
         $this->assertSame('Amina Yusuf', $user->fresh()->name);
         $this->assertSame('amina.y', $user->fresh()->username);
         $this->assertSame('0611111111', $teacher->fresh()->phone);
+    }
+
+    #[Test]
+    public function the_teacher_profile_lists_classes_and_subjects(): void
+    {
+        $user = User::factory()->create(['role' => 'teacher', 'username' => 'amina']);
+        $teacher = Teacher::create(['user_id' => $user->id, 'status' => 'active']);
+        $class = SchoolClass::create(['name' => 'Class 1', 'status' => 'active', 'class_teacher_id' => $teacher->id]);
+        $subject = Subject::create(['name' => 'Mathematics']);
+        ClassSubject::create(['class_id' => $class->id, 'subject_id' => $subject->id, 'teacher_id' => $teacher->id]);
+
+        $this->actingAs($this->admin())->get("/teachers/{$teacher->id}")
+            ->assertSuccessful()
+            ->assertSee('Class 1')
+            ->assertSee('Mathematics');
+    }
+
+    #[Test]
+    public function deactivating_a_teacher_with_assignments_shows_a_warning(): void
+    {
+        $user = User::factory()->create(['role' => 'teacher', 'username' => 'amina']);
+        $teacher = Teacher::create(['user_id' => $user->id, 'status' => 'active']);
+        $class = SchoolClass::create(['name' => 'Class 1', 'status' => 'active', 'class_teacher_id' => $teacher->id]);
+
+        $this->actingAs($this->admin())->post("/teachers/{$teacher->id}/deactivate")
+            ->assertSessionHas('warning');
     }
 
     #[Test]
