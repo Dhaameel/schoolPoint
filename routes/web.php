@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PlaceholderController;
+use App\Http\Controllers\Teacher\MyClassController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -75,9 +76,8 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
     });
 
     Route::middleware('role:teacher')->group(function () {
-        Route::get('/my-classes', [PlaceholderController::class, 'teacher'])
-            ->defaults('section', 'my-classes')
-            ->name('teacher.classes');
+        Route::get('/my-classes', [MyClassController::class, 'index'])->name('teacher.classes');
+        Route::get('/my-classes/{class}', [MyClassController::class, 'show'])->name('teacher.classes.show');
         Route::get('/teacher/attendance', [PlaceholderController::class, 'teacher'])
             ->defaults('section', 'attendance')
             ->name('teacher.attendance');

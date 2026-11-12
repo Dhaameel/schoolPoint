@@ -218,4 +218,12 @@ return [
     'student_class_moved' => 'Student moved to the new class.',
     'student_status_changed' => 'Student status changed.',
     'student_id_auto' => 'The Student ID is generated automatically when the student is saved.',
+    'my_class_list_help' => 'Classes where you are the class teacher or a subject teacher.',
+    'class_teacher_label' => 'Class teacher',
+    'subject_teacher' => 'Subject teacher',
+    'no_teacher_classes' => 'No classes are assigned to you yet. Ask an administrator to assign you.',
+    'view_roster' => 'View roster',
+    'subjects_you_teach' => 'Subjects you teach in this class',
+    'no_subjects_you_teach' => 'No subjects assigned to you in this class.',
+    'no_students_class' => 'No students in this class yet.',
 ];

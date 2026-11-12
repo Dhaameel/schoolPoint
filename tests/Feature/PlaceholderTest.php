@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Teacher;
 use App\Models\User;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,10 +40,11 @@ class PlaceholderTest extends TestCase
     #[Test]
     public function the_teacher_menu_pages_are_available(): void
     {
-        $teacher = $this->user('teacher');
+        $teacherUser = $this->user('teacher');
+        Teacher::create(['user_id' => $teacherUser->id, 'status' => 'active']);
 
-        $this->actingAs($teacher)->get('/my-classes')->assertSuccessful();
-        $this->actingAs($teacher)->get('/teacher/attendance')->assertSuccessful();
+        $this->actingAs($teacherUser)->get('/my-classes')->assertSuccessful();
+        $this->actingAs($teacherUser)->get('/teacher/attendance')->assertSuccessful();
     }
 
     #[Test]
