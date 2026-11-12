@@ -249,4 +249,6 @@ return [
     'import_duplicate_admission' => 'Admission number ":admission" is duplicated.',
     'row' => 'Row',
     'errors' => 'Errors',
+    'photo_invalid' => 'The photo could not be processed. Choose a JPG, PNG or WebP image.',
+    'import_too_many_rows' => 'The CSV has more than 500 rows. Split the file and try again.',
 ];

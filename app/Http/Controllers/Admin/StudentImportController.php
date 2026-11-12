@@ -13,6 +13,8 @@ use Illuminate\Validation\Rule;
 
 class StudentImportController extends Controller
 {
+    private const MAX_ROWS = 500;
+
     private const HEADERS = [
         'first_name',
         'last_name',
@@ -57,6 +59,10 @@ class StudentImportController extends Controller
 
         $handle = fopen($request->file('file')->getRealPath(), 'r');
         $header = fgetcsv($handle, 0, ',', '"', '');
+
+        if ($header) {
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]);
+        }
 
         if (! $header || array_map('trim', $header) !== self::HEADERS) {
             fclose($handle);
@@ -134,6 +140,10 @@ class StudentImportController extends Controller
         }
 
         fclose($handle);
+
+        if (count($rows) > self::MAX_ROWS) {
+            return back()->with('error', __('messages.import_too_many_rows'));
+        }
 
         $request->session()->put('student_import_rows', $rows);
         $invalidCount = collect($rows)->filter(fn ($row) => count($row['errors']) > 0)->count();

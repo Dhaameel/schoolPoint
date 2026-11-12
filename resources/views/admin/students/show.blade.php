@@ -20,7 +20,7 @@
             <div class="dashboard-card h-100">
                 <div class="text-center mb-3">
                     @if($student->photo_path)
-                        <img src="{{ asset('storage/'.$student->photo_path) }}" alt="{{ $student->name }}" width="112" height="112" style="object-fit: cover; border-radius: 50%;">
+                        <img src="{{ route('photos.students.show', $student) }}" alt="{{ $student->name }}" width="112" height="112" style="object-fit: cover; border-radius: 50%;">
                     @else
                         <span class="user-avatar" style="width: 112px; height: 112px; font-size: 2.3rem;"><i class="bi bi-person"></i></span>
                     @endif

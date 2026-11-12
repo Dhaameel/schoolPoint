@@ -30,4 +30,9 @@ class TeacherPolicy
     {
         return $user->isAdmin();
     }
+
+    public function viewPhoto(User $user, \App\Models\Teacher $teacher): bool
+    {
+        return $user->isAdmin() || $user->teacher?->id === $teacher->id;
+    }
 }

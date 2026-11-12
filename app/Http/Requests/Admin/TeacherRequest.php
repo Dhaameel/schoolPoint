@@ -22,7 +22,7 @@ class TeacherRequest extends FormRequest
             'username' => ['required', 'regex:/^[a-zA-Z0-9._-]+$/', 'max:50', Rule::unique('users', 'username')->ignore($userId)],
             'phone' => ['nullable', 'string', 'max:40'],
             'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
-            'photo' => ['nullable', 'image', 'max:2048'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ];
     }
 }

@@ -26,7 +26,7 @@ class StudentRequest extends FormRequest
             'admission_number' => ['nullable', 'string', 'max:50', Rule::unique('students', 'admission_number')->ignore($student?->id)],
             'class_id' => ['required', 'exists:school_classes,id'],
             'status' => ['nullable', Rule::in(['active', 'graduated', 'left'])],
-            'photo' => ['nullable', 'image', 'max:2048'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ];
     }
 }

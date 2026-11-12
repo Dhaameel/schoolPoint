@@ -6,7 +6,7 @@
     <div class="dashboard-heading">
         <div>
             <h1>{{ __('messages.edit_student') }}</h1>
-            <p>{{ $student->student_id }} · {{ $student->name }}</p>
+            <p>{{ $student->student_id }} Â· {{ $student->name }}</p>
         </div>
         <a class="btn btn-outline-secondary" href="{{ route('students.show', $student) }}">{{ __('messages.back') }}</a>
     </div>
@@ -61,7 +61,7 @@
                 <div class="col-md-6">
                     <label class="form-label" for="photo">{{ __('messages.photo') }}</label>
                     @if($student->photo_path)
-                        <div class="mb-2"><img src="{{ asset('storage/'.$student->photo_path) }}" alt="" width="56" height="56" style="object-fit: cover; border-radius: 50%;"></div>
+                        <div class="mb-2"><img src="{{ route('photos.students.show', $student) }}" alt="" width="56" height="56" style="object-fit: cover; border-radius: 50%;"></div>
                     @endif
                     <input class="form-control @error('photo') is-invalid @enderror" id="photo" name="photo" type="file" accept="image/*">
                     @error('photo')<span class="invalid-feedback">{{ $message }}</span>@enderror

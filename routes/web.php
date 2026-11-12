@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\PlaceholderController;
 use App\Http\Controllers\Teacher\MyClassController;
 use Illuminate\Support\Facades\Route;
@@ -38,6 +39,9 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
 
     Route::get('/password/change', [PasswordChangeController::class, 'edit'])->name('password.change');
     Route::post('/password/change', [PasswordChangeController::class, 'update'])->name('password.change.update');
+
+    Route::get('/photos/students/{student}', [PhotoController::class, 'student'])->name('photos.students.show');
+    Route::get('/photos/teachers/{teacher}', [PhotoController::class, 'teacher'])->name('photos.teachers.show');
 
     Route::middleware('role:admin')->group(function () {
         Route::get('/students/import', [StudentImportController::class, 'index'])->name('students.import');

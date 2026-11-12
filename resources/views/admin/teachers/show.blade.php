@@ -6,7 +6,7 @@
     <div class="dashboard-heading">
         <div>
             <h1>{{ $teacher->user->name }}</h1>
-            <p>{{ __('messages.teacher_profile') }} · {{ $teacher->user->username }}</p>
+            <p>{{ __('messages.teacher_profile') }} Â· {{ $teacher->user->username }}</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-primary" href="{{ route('teachers.edit', $teacher) }}"><i class="bi bi-pencil me-1"></i>{{ __('messages.edit') }}</a>
@@ -19,7 +19,7 @@
             <div class="dashboard-card h-100">
                 <div class="text-center mb-3">
                     @if($teacher->photo_path)
-                        <img src="{{ asset('storage/'.$teacher->photo_path) }}" alt="{{ $teacher->user->name }}" width="96" height="96" style="object-fit: cover; border-radius: 50%;">
+                        <img src="{{ route('photos.teachers.show', $teacher) }}" alt="{{ $teacher->user->name }}" width="96" height="96" style="object-fit: cover; border-radius: 50%;">
                     @else
                         <span class="user-avatar" style="width: 96px; height: 96px; font-size: 2rem;"><i class="bi bi-person"></i></span>
                     @endif
@@ -28,9 +28,9 @@
                     <dt class="col-5">{{ __('messages.teacher_username') }}</dt>
                     <dd class="col-7 text-end">{{ $teacher->user->username }}</dd>
                     <dt class="col-5">{{ __('messages.phone') }}</dt>
-                    <dd class="col-7 text-end">{{ $teacher->phone ?: '—' }}</dd>
+                    <dd class="col-7 text-end">{{ $teacher->phone ?: 'â€”' }}</dd>
                     <dt class="col-5">{{ __('messages.email') }}</dt>
-                    <dd class="col-7 text-end">{{ $teacher->user->email ?: '—' }}</dd>
+                    <dd class="col-7 text-end">{{ $teacher->user->email ?: 'â€”' }}</dd>
                     <dt class="col-5">{{ __('messages.status') }}</dt>
                     <dd class="col-7 text-end">
                         <span class="badge {{ $teacher->status === 'active' ? 'bg-success' : 'bg-secondary' }}">

@@ -58,7 +58,7 @@
                             <td data-label="{{ __('messages.teacher_name') }}">
                                 <div class="d-flex align-items-center gap-2">
                                     @if($teacher->photo_path)
-                                        <img src="{{ asset('storage/'.$teacher->photo_path) }}" alt="" width="32" height="32" style="object-fit: cover; border-radius: 50%;">
+                                        <img src="{{ route('photos.teachers.show', $teacher) }}" alt="" width="32" height="32" style="object-fit: cover; border-radius: 50%;">
                                     @else
                                         <span class="user-avatar"><i class="bi bi-person"></i></span>
                                     @endif

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Photos\StorePhotoAction;
 use App\Actions\Students\CreateStudentAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StudentRequest;
@@ -51,7 +52,7 @@ class StudentController extends Controller
         return view('admin.students.create', compact('classes'));
     }
 
-    public function store(StudentRequest $request, CreateStudentAction $action)
+    public function store(StudentRequest $request, CreateStudentAction $action, StorePhotoAction $photoAction)
     {
         $this->authorize('create', Student::class);
 
@@ -59,7 +60,7 @@ class StudentController extends Controller
         $data['status'] = 'active';
 
         if ($request->hasFile('photo')) {
-            $data['photo_path'] = $request->file('photo')->store('students', 'public');
+            $data['photo_path'] = $photoAction->handle($request->file('photo'), 'photos/students');
         }
 
         $student = $action->handle($data);
@@ -84,7 +85,7 @@ class StudentController extends Controller
         return view('admin.students.edit', compact('student', 'classes'));
     }
 
-    public function update(StudentRequest $request, Student $student)
+    public function update(StudentRequest $request, Student $student, StorePhotoAction $photoAction)
     {
         $this->authorize('update', $student);
 
@@ -92,10 +93,10 @@ class StudentController extends Controller
 
         if ($request->hasFile('photo')) {
             if ($student->photo_path) {
-                Storage::disk('public')->delete($student->photo_path);
+                Storage::disk('local')->delete($student->photo_path);
             }
 
-            $data['photo_path'] = $request->file('photo')->store('students', 'public');
+            $data['photo_path'] = $photoAction->handle($request->file('photo'), 'photos/students');
         }
 
         $student->update($data);

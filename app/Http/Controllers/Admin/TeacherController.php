@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Photos\StorePhotoAction;
 use App\Actions\Teachers\CreateTeacherAccountAction;
 use App\Actions\Teachers\ResetTeacherPasswordAction;
 use App\Http\Controllers\Controller;
@@ -45,14 +46,14 @@ class TeacherController extends Controller
         return view('admin.teachers.create');
     }
 
-    public function store(TeacherRequest $request, CreateTeacherAccountAction $action)
+    public function store(TeacherRequest $request, CreateTeacherAccountAction $action, StorePhotoAction $photoAction)
     {
         $this->authorize('create', Teacher::class);
 
         $data = $request->validated();
 
         if ($request->hasFile('photo')) {
-            $data['photo_path'] = $request->file('photo')->store('teachers', 'public');
+            $data['photo_path'] = $photoAction->handle($request->file('photo'), 'photos/teachers');
         }
 
         [$teacher, $password] = $action->handle($data);
@@ -95,7 +96,7 @@ class TeacherController extends Controller
         return view('admin.teachers.edit', compact('teacher'));
     }
 
-    public function update(TeacherRequest $request, Teacher $teacher)
+    public function update(TeacherRequest $request, Teacher $teacher, StorePhotoAction $photoAction)
     {
         $this->authorize('update', $teacher);
 
@@ -103,10 +104,10 @@ class TeacherController extends Controller
 
         if ($request->hasFile('photo')) {
             if ($teacher->photo_path) {
-                Storage::disk('public')->delete($teacher->photo_path);
+                Storage::disk('local')->delete($teacher->photo_path);
             }
 
-            $data['photo_path'] = $request->file('photo')->store('teachers', 'public');
+            $data['photo_path'] = $photoAction->handle($request->file('photo'), 'photos/teachers');
         }
 
         $teacher->user->update([

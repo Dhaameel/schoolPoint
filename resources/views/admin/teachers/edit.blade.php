@@ -39,7 +39,7 @@
                 <div class="col-12">
                     <label class="form-label" for="photo">{{ __('messages.photo') }}</label>
                     @if($teacher->photo_path)
-                        <div class="mb-2"><img src="{{ asset('storage/'.$teacher->photo_path) }}" alt="" width="56" height="56" style="object-fit: cover; border-radius: 50%;"></div>
+                        <div class="mb-2"><img src="{{ route('photos.teachers.show', $teacher) }}" alt="" width="56" height="56" style="object-fit: cover; border-radius: 50%;"></div>
                     @endif
                     <input class="form-control @error('photo') is-invalid @enderror" id="photo" name="photo" type="file" accept="image/*">
                     @error('photo')<span class="invalid-feedback">{{ $message }}</span>@enderror

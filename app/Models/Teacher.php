@@ -28,4 +28,14 @@ class Teacher extends Model
     {
         return $this->hasMany(SchoolClass::class, 'class_teacher_id');
     }
+
+    public function teachesClass(int $classId): bool
+    {
+        return SchoolClass::whereKey($classId)
+            ->where(function ($query) {
+                $query->where('class_teacher_id', $this->id)
+                    ->orWhereHas('classSubjects', fn ($query) => $query->where('teacher_id', $this->id));
+            })
+            ->exists();
+    }
 }

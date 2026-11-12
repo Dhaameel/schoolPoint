@@ -30,4 +30,19 @@ class StudentPolicy
     {
         return $user->isAdmin();
     }
+
+    public function viewPhoto(User $user, \App\Models\Student $student): bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        $teacher = $user->teacher;
+
+        if (! $teacher) {
+            return false;
+        }
+
+        return $teacher->teachesClass($student->class_id);
+    }
 }

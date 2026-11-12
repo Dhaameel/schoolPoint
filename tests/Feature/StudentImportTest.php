@@ -8,6 +8,7 @@ use App\Models\User;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -24,7 +25,10 @@ class StudentImportTest extends TestCase
 
     private function admin(): User
     {
-        return User::factory()->create(['role' => 'admin', 'username' => 'admin']);
+        return User::factory()->create([
+            'role' => 'admin',
+            'username' => 'admin'.Str::lower(Str::random(6)),
+        ]);
     }
 
     private function csv(array $rows): UploadedFile
@@ -94,6 +98,39 @@ class StudentImportTest extends TestCase
 
         $this->assertSame(1, Student::count());
         $this->assertDatabaseHas('students', ['first_name' => 'Amina']);
+    }
+
+    #[Test]
+    public function a_utf8_bom_file_with_somali_and_arabic_names_is_accepted(): void
+    {
+        $csv = "\xEF\xBB\xBFfirst_name,last_name,gender,date_of_birth,guardian_name,guardian_phone,admission_number,class_name,status\n";
+        $csv .= "Faarah,Maxamed,Female,,Hodan,0612345678,ADM-BOM-1,Class 1,active\n";
+        $csv .= "فاطمة,علي,Female,,سارة,0612345679,ADM-BOM-2,Class 1,active\n";
+        $file = UploadedFile::fake()->createWithContent('bom.csv', $csv);
+
+        $this->actingAs($this->admin())->post('/students/import/preview', ['file' => $file])
+            ->assertSuccessful()
+            ->assertSee('Faarah')
+            ->assertSee('فاطمة');
+
+        $this->actingAs($this->admin())->post('/students/import/store')
+            ->assertRedirect(route('students.index'));
+
+        $this->assertDatabaseHas('students', ['first_name' => 'Faarah']);
+        $this->assertDatabaseHas('students', ['first_name' => 'فاطمة']);
+    }
+
+    #[Test]
+    public function more_than_five_hundred_rows_are_rejected(): void
+    {
+        $csv = "first_name,last_name,gender,date_of_birth,guardian_name,guardian_phone,admission_number,class_name,status\n";
+        for ($i = 0; $i < 501; $i++) {
+            $csv .= "Amina,{$i},Female,,Hodan,0612345678,ADM-{$i},Class 1,active\n";
+        }
+
+        $this->actingAs($this->admin())
+            ->post('/students/import/preview', ['file' => UploadedFile::fake()->createWithContent('big.csv', $csv)])
+            ->assertSessionHas('error');
     }
 
     #[Test]
