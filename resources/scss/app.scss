@@ -230,6 +230,50 @@ a {
     margin-top: 2rem;
 }
 
+.attendance-grid-scroll {
+    max-height: 72vh;
+    overflow: auto;
+}
+
+.attendance-grid {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.attendance-grid thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 3;
+}
+
+.attendance-grid .sticky-name {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 2;
+    min-width: 180px;
+}
+
+.attendance-grid thead .sticky-name {
+    z-index: 4;
+}
+
+.attendance-grid .non-school {
+    background: #f3f4f6;
+    color: #9ca3af;
+}
+
+.attendance-grid .attendance-cell {
+    min-width: 34px;
+    height: 34px;
+}
+
+.attendance-choice {
+    min-height: 44px;
+    min-width: 82px;
+}
+
 /* Split-screen authentication */
 .auth-body {
     background: $sp-cream;
@@ -528,5 +572,18 @@ a {
     .data-table tbody td.text-end {
         justify-content: flex-end;
         flex-wrap: wrap;
+    }
+
+    .data-table tbody td.attendance-choice-cell {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .data-table tbody td.attendance-choice-cell::before {
+        flex-basis: 100%;
+    }
+
+    .attendance-choice-cell .attendance-choice {
+        flex: 1 1 0;
     }
 }

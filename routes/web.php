@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SchoolClassController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\PlaceholderController;
+use App\Http\Controllers\Teacher\AttendanceController as TeacherAttendanceController;
 use App\Http\Controllers\Teacher\MyClassController;
 use Illuminate\Support\Facades\Route;
 
@@ -65,9 +67,11 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::post('/classes/{class}/move', [SchoolClassController::class, 'bulkMove'])->name('classes.move');
         Route::resource('/classes', SchoolClassController::class)->except('destroy');
         Route::resource('/subjects', SubjectController::class)->except('show');
-        Route::get('/attendance', [PlaceholderController::class, 'admin'])
-            ->defaults('section', 'attendance')
-            ->name('attendance.index');
+        Route::get('/attendance', [AdminAttendanceController::class, 'index'])->name('attendance.index');
+        Route::get('/attendance/take', [AdminAttendanceController::class, 'take'])->name('attendance.take');
+        Route::post('/attendance/take', [AdminAttendanceController::class, 'store'])->name('attendance.store');
+        Route::get('/attendance/print', [AdminAttendanceController::class, 'print'])->name('attendance.print');
+        Route::get('/attendance/csv', [AdminAttendanceController::class, 'csv'])->name('attendance.csv');
         Route::get('/fees', [PlaceholderController::class, 'admin'])
             ->defaults('section', 'fees')
             ->name('fees.index');
@@ -87,8 +91,8 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
     Route::middleware('role:teacher')->group(function () {
         Route::get('/my-classes', [MyClassController::class, 'index'])->name('teacher.classes');
         Route::get('/my-classes/{class}', [MyClassController::class, 'show'])->name('teacher.classes.show');
-        Route::get('/teacher/attendance', [PlaceholderController::class, 'teacher'])
-            ->defaults('section', 'attendance')
-            ->name('teacher.attendance');
+        Route::get('/teacher/attendance', [TeacherAttendanceController::class, 'index'])->name('teacher.attendance');
+        Route::get('/teacher/attendance/{class}/take', [TeacherAttendanceController::class, 'take'])->name('teacher.attendance.take');
+        Route::post('/teacher/attendance/{class}', [TeacherAttendanceController::class, 'store'])->name('teacher.attendance.store');
     });
 });
