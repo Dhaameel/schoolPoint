@@ -2,7 +2,7 @@
 
 schoolPoint is a school management system built with Laravel 13.
 
-Current state: **Stages 1–4 complete** (foundation, people, attendance and fees).
+Current state: **Stages 1–5 complete** (foundation, people, attendance, fees and reports).
 
 The full product plan is in [ARCHITECTURE.md](ARCHITECTURE.md).
 

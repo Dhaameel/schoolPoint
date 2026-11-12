@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\FeeController;
 use App\Http\Controllers\Admin\FeePaymentController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SchoolClassController;
@@ -15,7 +16,6 @@ use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PhotoController;
-use App\Http\Controllers\PlaceholderController;
 use App\Http\Controllers\Teacher\AttendanceController as TeacherAttendanceController;
 use App\Http\Controllers\Teacher\MyClassController;
 use Illuminate\Support\Facades\Route;
@@ -97,9 +97,16 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
             ->whereNumber('fee')
             ->name('fees.void');
 
-        Route::get('/reports', [PlaceholderController::class, 'admin'])
-            ->defaults('section', 'reports')
-            ->name('reports.index');
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/students', [ReportController::class, 'students'])->name('reports.students');
+        Route::get('/reports/students/print', [ReportController::class, 'studentPrint'])->name('reports.students.print');
+        Route::get('/reports/students/csv', [ReportController::class, 'studentCsv'])->name('reports.students.csv');
+        Route::get('/reports/teachers', [ReportController::class, 'teachers'])->name('reports.teachers');
+        Route::get('/reports/teachers/print', [ReportController::class, 'teacherPrint'])->name('reports.teachers.print');
+        Route::get('/reports/teachers/csv', [ReportController::class, 'teacherCsv'])->name('reports.teachers.csv');
+        Route::get('/reports/classes', [ReportController::class, 'classes'])->name('reports.classes');
+        Route::get('/reports/classes/print', [ReportController::class, 'classPrint'])->name('reports.classes.print');
+        Route::get('/reports/classes/csv', [ReportController::class, 'classCsv'])->name('reports.classes.csv');
 
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
         Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
