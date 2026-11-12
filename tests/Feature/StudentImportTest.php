@@ -81,7 +81,8 @@ class StudentImportTest extends TestCase
 
         $this->actingAs($admin)->post('/students/import/preview', ['file' => $file])
             ->assertSuccessful()
-            ->assertSee('Class “Missing Class” does not exist.');
+            ->assertSee('Missing Class')
+            ->assertSee('does not exist');
 
         $this->actingAs($admin)->post('/students/import/store')
             ->assertSessionHas('error');

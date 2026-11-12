@@ -66,7 +66,7 @@
                                 </div>
                             </td>
                             <td data-label="{{ __('messages.teacher_username') }}">{{ $teacher->user->username }}</td>
-                            <td data-label="{{ __('messages.phone') }}">{{ $teacher->phone ?: '—' }}</td>
+                            <td data-label="{{ __('messages.phone') }}">{{ $teacher->phone ?: '-' }}</td>
                             <td data-label="{{ __('messages.status') }}">
                                 <span class="badge {{ $teacher->status === 'active' ? 'bg-success' : 'bg-secondary' }}">
                                     {{ $teacher->status === 'active' ? __('messages.active') : __('messages.inactive') }}
@@ -77,17 +77,17 @@
                                 <a class="btn btn-sm btn-outline-primary" href="{{ route('teachers.edit', $teacher) }}"><i class="bi bi-pencil"></i> {{ __('messages.edit') }}</a>
                                 <form class="d-inline" method="POST" action="{{ route('teachers.reset-password', $teacher) }}" onsubmit="return confirm('{{ __('messages.reset_password') }}?')">
                                     @csrf
-                                    <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-key"></i></button>
+                                    <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-key"></i> {{ __('messages.reset_password') }}</button>
                                 </form>
                                 @if($teacher->status === 'active')
                                     <form class="d-inline" method="POST" action="{{ route('teachers.deactivate', $teacher) }}" onsubmit="return confirm('{{ __('messages.deactivate') }}?')">
                                         @csrf
-                                        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-person-x"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-person-x"></i> {{ __('messages.deactivate') }}</button>
                                     </form>
                                 @else
                                     <form class="d-inline" method="POST" action="{{ route('teachers.reactivate', $teacher) }}">
                                         @csrf
-                                        <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-person-check"></i></button>
+                                        <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-person-check"></i> {{ __('messages.reactivate') }}</button>
                                     </form>
                                 @endif
                             </td>

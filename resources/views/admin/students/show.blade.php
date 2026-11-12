@@ -6,7 +6,7 @@
     <div class="dashboard-heading">
         <div>
             <h1>{{ $student->name }}</h1>
-            <p>{{ $student->student_id }} · {{ $student->schoolClass?->name ?? '—' }}</p>
+            <p>{{ $student->student_id }} &middot; {{ $student->schoolClass?->name ?? '-' }}</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-primary" href="{{ route('students.edit', $student) }}"><i class="bi bi-pencil me-1"></i>{{ __('messages.edit') }}</a>
@@ -34,25 +34,25 @@
                     <dt class="col-5">{{ __('messages.student_id') }}</dt>
                     <dd class="col-7 text-end"><code>{{ $student->student_id }}</code></dd>
                     <dt class="col-5">{{ __('messages.class') }}</dt>
-                    <dd class="col-7 text-end">{{ $student->schoolClass?->name ?? '—' }}</dd>
+                    <dd class="col-7 text-end">{{ $student->schoolClass?->name ?? '-' }}</dd>
                     <dt class="col-5">{{ __('messages.admission_number') }}</dt>
-                    <dd class="col-7 text-end">{{ $student->admission_number ?: '—' }}</dd>
+                    <dd class="col-7 text-end">{{ $student->admission_number ?: '-' }}</dd>
                 </dl>
             </div>
         </div>
 
         <div class="col-lg-8">
             <div class="dashboard-card mb-3">
-                <div class="dashboard-card-head"><h2>{{ __('messages.guardian_name') }}</h2></div>
+                <div class="dashboard-card-head"><h2>{{ __('messages.guardian_details') }}</h2></div>
                 <dl class="row mb-0">
                     <dt class="col-4">{{ __('messages.guardian_name') }}</dt>
                     <dd class="col-8 text-end">{{ $student->guardian_name }}</dd>
                     <dt class="col-4">{{ __('messages.guardian_phone') }}</dt>
                     <dd class="col-8 text-end">{{ $student->guardian_phone }}</dd>
                     <dt class="col-4">{{ __('messages.student_gender') }}</dt>
-                    <dd class="col-8 text-end">{{ $student->gender ?: '—' }}</dd>
+                    <dd class="col-8 text-end">{{ $student->gender ?: '-' }}</dd>
                     <dt class="col-4">{{ __('messages.date_of_birth') }}</dt>
-                    <dd class="col-8 text-end">{{ $student->date_of_birth?->format('j M Y') ?? '—' }}</dd>
+                    <dd class="col-8 text-end">{{ $student->date_of_birth?->format('j M Y') ?? '-' }}</dd>
                 </dl>
             </div>
 
