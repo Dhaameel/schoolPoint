@@ -17,6 +17,7 @@ class SettingSeeder extends Seeder
             'student_id_prefix' => 'SP',
             'receipt_prefix' => 'RCPT',
             'timezone' => 'Africa/Mogadishu',
+            'school_days' => json_encode([1, 2, 3, 4, 5]),
         ];
 
         foreach ($defaults as $key => $value) {

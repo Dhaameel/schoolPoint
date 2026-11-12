@@ -51,6 +51,7 @@ class SettingsTest extends TestCase
             'student_id_prefix' => 'GHS',
             'receipt_prefix' => 'RCP',
             'timezone' => 'Africa/Nairobi',
+            'school_days' => [1, 2, 3, 4, 5],
         ])->assertRedirect(route('settings.edit'));
 
         $this->assertSame('Green Hill School', Setting::get('school_name'));
@@ -77,6 +78,7 @@ class SettingsTest extends TestCase
             'student_id_prefix' => 'GHS',
             'receipt_prefix' => 'RCP',
             'timezone' => 'Mars/Olympus',
+            'school_days' => [1, 2, 3, 4, 5],
         ])->assertSessionHasErrors('timezone');
     }
 }

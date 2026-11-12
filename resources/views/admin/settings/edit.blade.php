@@ -85,6 +85,22 @@
             </div>
 
             <div class="col-12">
+                <div class="dashboard-card">
+                    <div class="dashboard-card-head"><h2>{{ __('messages.school_days') }}</h2></div>
+                    <p class="text-muted small">{{ __('messages.school_days_help') }}</p>
+                    <div class="d-flex flex-wrap gap-3">
+                        @foreach([1 => 'monday', 2 => 'tuesday', 3 => 'wednesday', 4 => 'thursday', 5 => 'friday', 6 => 'saturday', 7 => 'sunday'] as $day => $key)
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="school_days[]" id="school_day_{{ $day }}" value="{{ $day }}" {{ in_array($day, old('school_days', $schoolDays), true) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="school_day_{{ $day }}">{{ __('messages.'.$key) }}</label>
+                            </div>
+                        @endforeach
+                    </div>
+                    @error('school_days')<div class="text-danger small mt-2">{{ $message }}</div>@enderror
+                </div>
+            </div>
+
+            <div class="col-12">
                 <button class="btn btn-primary" type="submit">{{ __('messages.save_settings') }}</button>
             </div>
         </div>

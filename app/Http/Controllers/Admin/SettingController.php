@@ -14,7 +14,10 @@ class SettingController extends Controller
     {
         $settings = Setting::query()->pluck('value', 'key');
 
-        return view('admin.settings.edit', compact('settings'));
+        return view('admin.settings.edit', [
+            'settings' => $settings,
+            'schoolDays' => \App\Models\Setting::schoolDays(),
+        ]);
     }
 
     public function update(Request $request)
@@ -26,7 +29,11 @@ class SettingController extends Controller
             'student_id_prefix' => ['required', 'alpha_num', 'max:5'],
             'receipt_prefix' => ['required', 'alpha_num', 'max:10'],
             'timezone' => ['required', 'timezone'],
+            'school_days' => ['required', 'array', 'min:1'],
+            'school_days.*' => ['integer', 'between:1,7'],
         ]);
+
+        $data['school_days'] = json_encode(array_values(array_unique($data['school_days'])));
 
         $oldLogo = Setting::get('school_logo_path');
 
